@@ -209,7 +209,7 @@ textarea.input.tall { min-height: 220px; }
 .add.wrap select { flex-basis: 100%; }
 
 .segmented { display: inline-flex; padding: 3px; gap: 2px; border-radius: 999px; background: var(--surface); }
-.segmented button { height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font-weight: 500; white-space: nowrap; transition: background-color var(--t-hover) ease, color var(--t-hover) ease; }
+.segmented button { height: 32px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font-weight: 500; white-space: nowrap; }
 .segmented button:hover { color: var(--text); }
 .segmented button[aria-pressed="true"] { background: var(--raised); color: var(--text); }
 
@@ -217,7 +217,7 @@ textarea.input.tall { min-height: 220px; }
 .days button {
   flex: 1; min-width: 0; height: 52px; border: 0; border-radius: 16px; background: var(--surface); color: var(--muted);
   display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 500; line-height: 18px;
-  transition: background-color var(--t-hover) ease, color var(--t-hover) ease, transform var(--t-press) var(--ease-out);
+  transition: transform var(--t-press) var(--ease-out);
 }
 .days button small { font-size: 12px; font-weight: 400; }
 .days button:active { transform: scale(0.96); }

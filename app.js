@@ -787,9 +787,14 @@ function enter(dir) {
 // подкатегории: анимируются только плашки, которые от них зависят (data-part)
 const PARTS = { studyWeek: 'week', studyDay: 'day', foodDay: 'day', gymW: 'workout' };
 
+// Заменяются только эти плашки: заголовок, переключатели и график остаются теми же элементами и не перерисовываются.
 function animatePart(part) {
-  render();
-  if (!reduceMotion.matches) riseBlocks(document.querySelectorAll(`#main [data-part="${part}"]`), 'fade');
+  const tmp = document.createElement('template');
+  tmp.innerHTML = VIEWS[route()]();
+  const sel = `[data-part="${part}"]`;
+  const fresh = [...tmp.content.querySelectorAll(sel)];
+  document.querySelectorAll(`#main ${sel}`).forEach((el, i) => { if (fresh[i]) el.replaceWith(fresh[i]); });
+  if (!reduceMotion.matches) riseBlocks(fresh, 'fade');
 }
 
 function animated(dir, update) {
@@ -1001,6 +1006,9 @@ if (document.fonts) document.fonts.ready.then(drawWeightChart);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  // новая версия скачалась — применить сразу, если человек сейчас ничего не вводит
+  const hadWorker = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadWorker && idle()) location.reload(); });
 }
 
 renderShell();
