@@ -52,6 +52,7 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
 body {
   margin: 0; background: var(--ground); color: var(--text);
   font: 400 var(--fs-body)/20px var(--font); -webkit-font-smoothing: antialiased;
@@ -73,10 +74,10 @@ svg { display: block; }
 .neg { color: var(--negative); }
 
 /* ---------- оболочка ---------- */
-.app { display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr); min-height: 100svh; }
+.app { display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr); height: 100vh; height: 100dvh; }
 
 .sidebar {
-  position: sticky; top: 0; height: 100svh; display: flex; flex-direction: column; gap: 2px;
+  min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 2px;
   padding: 24px 12px 16px; border-right: 1px solid var(--border); background: var(--ground);
 }
 .brand { display: flex; align-items: center; gap: 10px; padding: 0 8px 24px; }
@@ -95,7 +96,12 @@ svg { display: block; }
 
 .topbar, .tabbar { display: none; }
 
-.canvas { min-width: 0; padding: 40px 32px 96px; }
+.canvas { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+/* экраны вкладок живут постоянно: у каждого своя прокрутка, скрытые стоят за правым краем уже нарисованными */
+.screen { position: absolute; inset: 0; overflow: hidden auto; overscroll-behavior: contain; padding: 40px 32px 96px; will-change: transform; }
+.screen.off { transform: translate3d(100%, 0, 0); }
+/* слой заранее и навсегда: анимация не заставляет браузер пересобирать слои */
+[data-lay]:not(.panel), .panel[data-lay]::before { will-change: transform, opacity; }
 .column { max-width: 1100px; margin: 0 auto; }
 
 /* ---------- заголовок экрана ---------- */
@@ -111,7 +117,9 @@ svg { display: block; }
 .s3 { grid-column: span 3; } .s6 { grid-column: span 6; } .s9 { grid-column: span 9; } .s12 { grid-column: 1 / -1; }
 
 /* ---------- панели ---------- */
-.panel { background: var(--surface); border-radius: var(--radius-card); padding: var(--pad); min-width: 0; }
+.panel { position: relative; z-index: 0; border-radius: var(--radius-card); padding: var(--pad); min-width: 0; }
+/* фон панели отдельно от её строк: их можно анимировать независимо */
+.panel::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--surface); }
 .panel > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 24px; margin-bottom: 14px; }
 .panel h2 { font-size: var(--fs-section); line-height: 20px; font-weight: 600; }
 .panel.stretch { align-self: stretch; display: flex; flex-direction: column; }
@@ -266,7 +274,7 @@ textarea.input.tall { min-height: 220px; }
 .figure { font-size: var(--fs-kpi); line-height: 36px; letter-spacing: -0.02em; margin-bottom: 10px; }
 
 .track { height: 8px; border-radius: 999px; background: #2a2d2a; overflow: hidden; }
-.track span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width var(--t-ui) var(--ease-out); }
+.track span { transform-origin: left center; display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width var(--t-ui) var(--ease-out); }
 
 /* ---------- неделя ---------- */
 .week { display: grid; grid-template-columns: 56px repeat(6, minmax(0, 1fr)); gap: 8px; }
@@ -419,23 +427,23 @@ textarea.input.tall { min-height: 220px; }
 
 /* ---------- планшет: боковая панель складывается, широкие пролёты держатся ---------- */
 @media (max-width: 1080px) {
-  .app { grid-template-columns: minmax(0, 1fr); }
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
   .sidebar { display: none; }
   .topbar {
-    display: flex; position: sticky; top: 0; z-index: 20; align-items: center; justify-content: space-between;
+    display: flex; z-index: 20; align-items: center; justify-content: space-between;
     height: calc(48px + var(--safe-t)); padding: var(--safe-t) 8px 0 16px; background: var(--ground); border-bottom: 1px solid var(--border);
   }
   .topbar-brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; }
   .topbar .mark { width: 26px; height: 26px; }
   .tabbar {
-    display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    display: flex; z-index: 20;
     padding: 4px 8px calc(4px + var(--safe-b)); background: var(--ground); border-top: 1px solid var(--border);
   }
   .tabbar .nav-item { flex: 1; flex-direction: column; justify-content: center; gap: 2px; height: 52px; padding: 0; border-radius: 14px; font-size: 12px; line-height: 16px; font-weight: 500; }
   .tabbar .nav-item svg { width: 20px; height: 20px; }
   .tabbar .nav-item[aria-current="page"] { background: var(--active); }
   :root { --fs-greet: 40px; }
-  .canvas { padding: 28px 24px calc(var(--tabbar-h) + var(--safe-b) + 96px); }
+  .screen { padding: 28px 24px 96px; }
   .timer { bottom: calc(var(--tabbar-h) + var(--safe-b) + 12px); }
   .s9, .s3:not(.tile) { grid-column: 1 / -1; }
   .tile.s3 { grid-column: span 6; }
@@ -446,7 +454,7 @@ textarea.input.tall { min-height: 220px; }
 /* ---------- телефон ---------- */
 @media (max-width: 760px) {
   :root { --fs-greet: 28px; --fs-title: 24px; --fs-kpi: 26px; --pad: 16px; }
-  .canvas { padding: 20px 16px calc(var(--tabbar-h) + var(--safe-b) + 96px); }
+  .screen { padding: 20px 16px 96px; }
   .title-row { flex-direction: column; align-items: stretch; gap: 16px; margin-bottom: 24px; }
   .title-row .sub { font-size: 15px; line-height: 22px; margin-top: 10px; }
   .title-actions .segmented { display: flex; width: 100%; }
@@ -491,9 +499,6 @@ html { touch-action: manipulation; }
 a, button { -webkit-touch-callout: none; }
 .nav-item { width: 100%; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; user-select: none; -webkit-user-select: none; transition: transform var(--t-press) var(--ease-out); }
 .nav-item:active { transform: scale(0.94); }
-
-/* панели за пределами экрана не просчитываются при каждой перерисовке (кроме панели с графиком: ему нужна ширина) */
-.grid > .panel:not(.no-cv), .stack > .panel { content-visibility: auto; contain-intrinsic-size: auto 320px; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation: none !important; scroll-behavior: auto !important; }
