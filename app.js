@@ -733,7 +733,7 @@ const VIEWS = { today: viewToday, study: viewStudy, food: viewFood, gym: viewGym
 const TITLES = { today: 'Сегодня', study: 'Учёба', food: 'Питание', gym: 'Зал', projects: 'Проекты' };
 
 function renderShell() {
-  const nav = TABS.map(([id, label]) => `<a class="nav-item" href="#${id}" data-tab="${id}">${ICON[id]}<span>${label}</span></a>`).join('');
+  const nav = TABS.map(([id, label]) => `<button type="button" class="nav-item" data-tab="${id}">${ICON[id]}<span>${label}</span></button>`).join('');
   document.getElementById('sidebar').innerHTML = `
     <div class="brand">${MARK}<div><b>Распорядок</b><span>Илья · 26-ИСбо-2</span></div></div>
     <nav aria-label="Разделы">${nav}</nav>`;
@@ -746,24 +746,42 @@ function markNav(r) {
   });
 }
 
-// Появление экрана: одно и то же на всех вкладках. Блоки по очереди, всё укладывается примерно в 0,4 с.
+// Появление экрана: волна сверху вниз. Задержка считается от положения на экране, а не от числа строк,
+// поэтому все вкладки выглядят одинаково. Анимируется только то, что видно; dir — лёгкий сдвиг в сторону вкладки.
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const UNITS = 'header, .days button, .item, .lesson, .ex, .strip, .wk-day, .wk-cell, .ledger-row, .dish, .ahead-row, .check-line, .fold, .plan, .well-row, .mini li, .rules li, .empty, .add, .figure, .track, textarea';
+const WAVE_MS = 260;
 
-function enter() {
-  const blocks = document.getElementById('main').querySelectorAll(':scope > :not(.grid), :scope > .grid > :not(.stack), :scope > .grid > .stack > *');
-  blocks.forEach((el, i) => { el.style.setProperty('--i', Math.min(i, 5)); el.classList.add('rise'); });
+function enter(dir) {
+  const main = document.getElementById('main');
+  const vh = innerHeight;
+  const delay = top => `${Math.round(Math.max(0, Math.min(1, top / vh)) * WAVE_MS)}ms`;
+  main.style.setProperty('--dx', dir === 'fwd' ? '12px' : dir === 'back' ? '-12px' : '0px');
+  main.querySelectorAll(':scope > :not(.grid), :scope > .grid > :not(.stack), :scope > .grid > .stack > *').forEach(block => {
+    const top = block.getBoundingClientRect().top;
+    if (top >= vh) return; // ниже экрана — без анимации
+    block.style.setProperty('--d', delay(top));
+    block.classList.add('rise');
+    block.querySelectorAll(UNITS).forEach(row => {
+      const r = row.getBoundingClientRect();
+      if (!r.height || r.top >= vh) return;
+      row.style.setProperty('--d', `calc(${delay(r.top)} + 50ms)`);
+      row.classList.add('rise-row');
+    });
+  });
 }
 
-function animated(update) {
+function animated(dir, update) {
   update();
-  if (!reduceMotion.matches) enter();
+  if (!reduceMotion.matches) enter(dir);
 }
 
-const openScreen = () => animated(() => { render(); scrollTo(0, 0); });
+const openScreen = dir => animated(dir, () => { render(); scrollTo(0, 0); });
 
 function switchTo(r) {
+  const from = TABS.findIndex(t => t[0] === lastRoute), to = TABS.findIndex(t => t[0] === r);
   if (r !== 'projects') ui.project = null;
-  openScreen();
+  openScreen(to >= from ? 'fwd' : 'back');
 }
 
 let lastRoute = null;
@@ -828,8 +846,8 @@ const ACTIONS = {
   foodDay(el) { ui.foodDay = +el.dataset.v; return 'fade'; },
   gymW(el) { ui.gymW = el.dataset.v; return 'fade'; },
   openGym(el) { ui.gymW = el.dataset.v; history.pushState(null, '', '#gym'); switchTo('gym'); return false; },
-  openProject(el) { ui.project = el.dataset.id; openScreen(); return false; },
-  closeProject() { ui.project = null; openScreen(); return false; },
+  openProject(el) { ui.project = el.dataset.id; openScreen('fwd'); return false; },
+  closeProject() { ui.project = null; openScreen('back'); return false; },
   focusTask() { focusField('task-text'); return false; },
   focusProject() { focusField('p-name'); return false; },
   renameProject(el) {
@@ -855,7 +873,7 @@ document.addEventListener('click', e => {
   if (el.tagName === 'A') e.preventDefault();
   const res = fn(el, e);
   if (res === false) return;
-  if (res === 'fade') { animated(render); return; }
+  if (res === 'fade') { animated('fade', render); return; }
   if (res !== 'ui') save();
   render();
 });
@@ -865,7 +883,7 @@ let tappedTab = false;
 
 function openTab(tab) {
   if (tab === route()) {
-    if (ui.project) { ui.project = null; openScreen(); } // из проекта — обратно к списку
+    if (ui.project) { ui.project = null; openScreen('back'); } // из проекта — обратно к списку
     else scrollTo({ top: 0, behavior: 'smooth' });
     return;
   }
@@ -874,7 +892,7 @@ function openTab(tab) {
 }
 
 document.addEventListener('pointerdown', e => {
-  const a = e.target.closest('a[data-tab]');
+  const a = e.target.closest('[data-tab]');
   if (!a || e.button !== 0 || e.metaKey || e.ctrlKey) return;
   tappedTab = true;
   setTimeout(() => { tappedTab = false; }, 800);
@@ -882,12 +900,15 @@ document.addEventListener('pointerdown', e => {
 });
 
 document.addEventListener('click', e => {
-  const a = e.target.closest('a[data-tab]');
+  const a = e.target.closest('[data-tab]');
   if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey) return;
   e.preventDefault();
   if (tappedTab) { tappedTab = false; return; }
   openTab(a.dataset.tab);
 });
+
+// долгое нажатие на ссылку или кнопку не открывает системное меню
+document.addEventListener('contextmenu', e => { if (e.target.closest('a, button')) e.preventDefault(); });
 
 const FORMS = {
   task(f, d) { S.tasks.push({ id: uid(), text: d.text.trim(), date: d.date || today(), done: false, doneAt: null }); },
@@ -945,4 +966,4 @@ if ('serviceWorker' in navigator) {
 }
 
 renderShell();
-animated(render);
+animated('fade', render);

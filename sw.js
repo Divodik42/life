@@ -1,14 +1,14 @@
-// Свои файлы: сначала сеть (обновления приходят сразу), без сети — из кеша.
-// Шрифты Google: из кеша, если уже скачаны.
-const CACHE = 'raspisanie-v2-7';
+// Запуск всегда из кеша, без ожидания сети: приложение открывается мгновенно и при слабом интернете.
+// В фоне файлы проверяются на обновления — новая версия появится при следующем открытии.
+const CACHE = 'raspisanie-v2-8';
 const FILES = [
   './', './index.html', './style.css', './data.js', './charts.js', './app.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
+  './fonts/onest-cyrillic.woff2', './fonts/onest-latin.woff2', './fonts/literata-cyrillic.woff2', './fonts/literata-latin.woff2',
 ];
-const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' })))));
   self.skipWaiting();
 });
 
@@ -19,24 +19,17 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const req = e.request;
-  if (req.method !== 'GET') return;
-  const url = new URL(req.url);
+  if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
 
-  if (FONT_HOSTS.includes(url.hostname)) {
-    e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => {
-      if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
-      return res;
-    })));
-    return;
-  }
-  if (url.origin !== location.origin) return;
+  const refresh = fetch(req, { cache: 'no-cache' }).then(res => {
+    if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
+    return res;
+  });
 
   e.respondWith(
-    fetch(req, { cache: 'no-cache' })
-      .then(res => {
-        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
-        return res;
-      })
-      .catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || caches.match('./index.html')))
+    caches.match(req, { ignoreSearch: true }).then(hit => {
+      if (hit) { e.waitUntil(refresh.catch(() => {})); return hit; }
+      return refresh.catch(() => caches.match('./index.html'));
+    })
   );
 });
