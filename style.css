@@ -383,18 +383,6 @@ textarea.input.tall { min-height: 220px; }
 .danger { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px; border-radius: var(--radius-card); border: 1px solid var(--border); }
 .danger h2 { font-size: var(--fs-section); font-weight: 600; }
 
-/* ---------- настройки ---------- */
-.setting { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--gap); padding: 32px 0; }
-.setting + .setting { border-top: 1px solid var(--rule); }
-.title-row + .setting { padding-top: 0; }
-.setting-label h2 { font-size: 16px; line-height: 24px; font-weight: 500; margin-top: 8px; }
-.setting-label p { color: var(--muted); margin-top: 4px; max-width: 40ch; }
-.setting-panel { background: var(--surface); border-radius: 16px; padding: 16px; }
-.setting-panel .item-meta { margin-top: 12px; }
-.howto { display: grid; grid-template-columns: max-content 1fr; gap: 8px 16px; margin-top: 4px; }
-.howto dt { font-weight: 500; }
-.howto dd { color: var(--muted); }
-
 /* ---------- плавающее ---------- */
 .timer {
   position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 30;
@@ -474,8 +462,6 @@ textarea.input.tall { min-height: 220px; }
   .shop, .dishes, .notes-list.cols { grid-template-columns: 1fr; }
   .dish:nth-child(2) { border-top: 1px solid var(--rule); }
   .rules { columns: 1; }
-  .setting { grid-template-columns: 1fr; padding: 24px 0; }
-  .setting-label h2 { margin-top: 0; }
   .danger { flex-direction: column; align-items: stretch; }
   .ex-ctrl { width: 100%; justify-content: space-between; }
   .input.date { width: 138px; }

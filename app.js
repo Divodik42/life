@@ -91,7 +91,6 @@ const ICON = {
   food: I('<path d="M7 4v6.5a2 2 0 0 0 4 0V4M9 12.5V20M17 20V4c-2.2 1.2-3 3.6-3 6.4 0 2.4.9 3.6 3 3.6"/>'),
   gym: I('<path d="M7 7v10M17 7v10M4 9.5v5M20 9.5v5M7 12h10"/>'),
   projects: I('<path d="M4 7.5A1.5 1.5 0 0 1 5.5 6H10l2 2h6.5A1.5 1.5 0 0 1 20 9.5v8a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/>'),
-  settings: I('<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>'),
   check: I('<path d="M6 12.5 10 16.5 18 8"/>'),
   x: I('<path d="M7 7l10 10M17 7 7 17"/>'),
   back: I('<path d="M14.5 6l-6 6 6 6"/>'),
@@ -106,7 +105,7 @@ const ui = { studyWeek: null, studyDay: null, foodDay: null, gymW: null, project
 
 function route() {
   const h = location.hash.slice(1);
-  return h === 'settings' || TABS.some(t => t[0] === h) ? h : 'today';
+  return TABS.some(t => t[0] === h) ? h : 'today';
 }
 
 // ---------- Общие куски разметки ----------
@@ -729,49 +728,15 @@ function viewProject(p) {
     + `</div>`;
 }
 
-// ---------- Настройки ----------
-let installPrompt = null;
-window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; if (route() === 'settings') render(); });
-
-function settingRow(title, desc, body) {
-  return `<section class="setting"><div class="setting-label"><h2>${title}</h2><p>${desc}</p></div><div class="setting-panel">${body}</div></section>`;
-}
-
-function viewSettings() {
-  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-  const size = (() => { try { return new Blob([localStorage.getItem(KEY) || '']).size; } catch (e) { return 0; } })();
-  return titleRow('Настройки', 'Распорядок хранит всё на этом устройстве.')
-    + settingRow('Подгруппа', 'От неё зависят лабы по C#, ИТ, Теории информации и английский.',
-      segmented([[1, 'Подгруппа 1'], [2, 'Подгруппа 2']], S.settings.subgroup, 'subgroup', 'Подгруппа')
-      + `<p class="item-meta">Сейчас в неделе 1 у тебя ${SCHEDULE[1].flat().filter(bySubgroup).length} пар, в неделе 2: ${SCHEDULE[2].flat().filter(bySubgroup).length}.</p>`)
-    + settingRow('Учебные недели', 'Недели 1 и 2 чередуются по расписанию группы.',
-      `<div class="well flat"><div class="well-row"><span>Неделя 1 началась</span><span class="num">${fmtDate(keyOf(new Date(...WEEK1_MONDAY)))} ${WEEK1_MONDAY[0]}</span></div>
-        <div class="well-row"><span>Сейчас</span><span class="num">неделя ${weekOf(new Date())}</span></div>
-        <div class="well-row"><span>Следующий понедельник</span><span class="num">${fmtDate(keyOf(addDays(mondayOf(new Date()), 7)))}, неделя ${weekOf(addDays(mondayOf(new Date()), 7))}</span></div></div>`)
-    + settingRow('Цели', 'Из плана питания и программы Full Body. Меняются в файле data.js.',
-      `<div class="well flat"><div class="well-row"><span>Калории</span><span class="num">${FOOD_TARGET.kcal} ккал</span></div>
-        <div class="well-row"><span>Белок</span><span class="num">${FOOD_TARGET.p} г</span></div>
-        <div class="well-row"><span>Вода</span><span class="num">2,5–3 л</span></div>
-        <div class="well-row"><span>Зал</span><span class="num">${WORKOUTS.map(w => DAYS_SHORT[w.day]).join(', ')}</span></div></div>`)
-    + settingRow('На главный экран', 'Ярлык открывает приложение во весь экран и работает без интернета.',
-      standalone ? '<p>Уже установлено как приложение.</p>' : `${installPrompt ? '<button class="btn primary" data-a="install">Установить приложение</button>' : ''}
-        <dl class="howto"><dt>Android, Chrome</dt><dd>Меню ⋮, затем «Добавить на главный экран».</dd><dt>iPhone, Safari</dt><dd>Кнопка «Поделиться», затем «На экран „Домой“».</dd></dl>`)
-    + settingRow('Резервная копия', 'Если очистить данные браузера, записи пропадут. Копия — один файл JSON.',
-      `<p class="num">Сейчас данных: ${num(size / 1024, 1)} КБ · ${S.tasks.length} задач, ${S.projects.length} проектов, ${S.weights.length} взвешиваний.</p>
-       <div class="btn-row"><button class="btn primary" data-a="export">Скачать копию</button>
-       <label class="btn">Загрузить копию<input type="file" accept="application/json,.json" data-a="import" hidden></label></div>`);
-}
-
 // ---------- Оболочка ----------
-const VIEWS = { today: viewToday, study: viewStudy, food: viewFood, gym: viewGym, projects: viewProjects, settings: viewSettings };
-const TITLES = { today: 'Сегодня', study: 'Учёба', food: 'Питание', gym: 'Зал', projects: 'Проекты', settings: 'Настройки' };
+const VIEWS = { today: viewToday, study: viewStudy, food: viewFood, gym: viewGym, projects: viewProjects };
+const TITLES = { today: 'Сегодня', study: 'Учёба', food: 'Питание', gym: 'Зал', projects: 'Проекты' };
 
 function renderShell() {
   const nav = TABS.map(([id, label]) => `<a class="nav-item" href="#${id}" data-tab="${id}">${ICON[id]}<span>${label}</span></a>`).join('');
   document.getElementById('sidebar').innerHTML = `
     <div class="brand">${MARK}<div><b>Распорядок</b><span>Илья · 26-ИСбо-2</span></div></div>
-    <nav aria-label="Разделы">${nav}</nav>
-    <div class="bottom"><a class="nav-item" href="#settings" data-tab="settings">${ICON.settings}<span>Настройки</span></a></div>`;
+    <nav aria-label="Разделы">${nav}</nav>`;
   document.getElementById('tabbar').innerHTML = nav;
 }
 
@@ -855,17 +820,6 @@ const ACTIONS = {
     S.projects = S.projects.filter(x => x.id !== p.id);
     ui.project = null;
   },
-  subgroup(el) { S.settings.subgroup = +el.dataset.v; },
-  install() { installPrompt?.prompt(); installPrompt = null; return 'ui'; },
-  export() {
-    const blob = new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `raspisanie-backup-${today()}.json`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    return false;
-  },
   undo() { const f = undoFn; undoFn = null; document.getElementById('toast').hidden = true; f?.(); return false; },
 };
 
@@ -920,23 +874,6 @@ document.addEventListener('input', e => {
   else if (b === 'kg') gymEntry(today(), currentWid(), +el.dataset.i, true).kg = el.value;
   clearTimeout(bindTimer);
   bindTimer = setTimeout(save, 300);
-});
-
-document.addEventListener('change', e => {
-  const el = e.target;
-  if (el.dataset.a !== 'import' || !el.files[0]) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const data = JSON.parse(reader.result);
-      if (!confirm('Заменить текущие данные данными из файла?')) return;
-      S = Object.assign(defaults(), data);
-      save(); render();
-      toast('Копия загружена');
-    } catch (err) { toast('Файл не похож на копию Распорядка'); }
-  };
-  reader.readAsText(el.files[0]);
-  el.value = '';
 });
 
 window.addEventListener('hashchange', () => {
