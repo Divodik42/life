@@ -97,7 +97,7 @@ const ICON = {
   plus: I('<path d="M12 6v12M6 12h12"/>'),
   minus: I('<path d="M6 12h12"/>'),
 };
-const MARK = '<svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--accent-fill)"/><path d="M8.5 10.5l2 2 3.5-4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 10.5h6.5M10 16h13.5M10 21.5h13.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>';
+const MARK = '<svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect x="0.5" y="0.5" width="31" height="31" rx="8.5" fill="#000" stroke="#333"/><path d="M8.5 10.5l2 2 3.5-4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 10.5h6.5M10 16h13.5M10 21.5h13.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>';
 
 // ---------- Маршруты и состояние интерфейса ----------
 const TABS = [['today', 'Сегодня'], ['study', 'Учёба'], ['food', 'Питание'], ['gym', 'Зал'], ['projects', 'Проекты']];
@@ -749,7 +749,7 @@ function markNav(r) {
 // Смена экрана с анимацией: экран собирается по блокам сверху вниз,
 // строки внутри блоков догоняют каскадом. fwd/back — лёгкий сдвиг в сторону вкладки, fade — без сдвига.
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
-const ROWS = '.item, .lesson, .ex, .strip-block, .wk-cell, .wk-day, .ledger-row, .dish, .ahead-row, .check-line, .fold, .plan, .well-row, .mini li, .rules li';
+const ROWS = '.days button, .item, .lesson,.ex, .strip-block, .wk-cell, .wk-day, .ledger-row, .dish, .ahead-row, .check-line, .fold, .plan, .well-row, .mini li, .rules li';
 let enterTimer = null;
 
 function enter(dir) {
@@ -760,7 +760,12 @@ function enter(dir) {
   blocks.forEach((el, i) => {
     el.classList.add('rise');
     el.style.setProperty('--i', Math.min(i, 9));
-    [...el.querySelectorAll(ROWS)].slice(0, 12).forEach((r, j) => { r.classList.add('rise-row'); r.style.setProperty('--j', j); });
+    // только видимые строки: скрытая на телефоне сетка недели не должна занимать очередь;
+    // длинные списки не обрезаются — всё после 12-й строки приходит вместе с ней
+    [...el.querySelectorAll(ROWS)].filter(r => r.getClientRects().length).forEach((r, j) => {
+      r.classList.add('rise-row');
+      r.style.setProperty('--j', Math.min(j, 11));
+    });
   });
   main.style.setProperty('--dx', dir === 'fwd' ? '12px' : dir === 'back' ? '-12px' : '0px');
   void main.offsetWidth; // перезапуск анимаций
