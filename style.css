@@ -473,19 +473,15 @@ textarea.input.tall { min-height: 220px; }
 }
 
 /* ---------- появление экрана ----------
-   Блоки поднимаются по очереди (--i), строки внутри них — каскадом (--j), полосы прогресса растут.
+   Одно на все вкладки: блоки поднимаются по очереди, максимум примерно 0,4 с.
    Только transform и opacity; при «уменьшить движение» JS анимацию не включает. */
-.enter .rise { animation: rise 460ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 55ms); }
-.enter .rise-row { animation: rise-row 380ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 55ms + 110ms + var(--j, 0) * 32ms); }
-.enter .rise .track span { animation: grow 800ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 55ms + 200ms); transform-origin: left center; }
-@keyframes rise { from { opacity: 0; transform: translate(var(--dx, 0px), 16px); } }
-@keyframes rise-row { from { opacity: 0; transform: translateY(8px); } }
-@keyframes grow { from { transform: scaleX(0); } }
+.rise { animation: rise 240ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 30ms); }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } }
 
-.nav-item { transition: background-color var(--t-hover) ease, color var(--t-hover) ease, transform var(--t-press) var(--ease-out); }
+/* отклик вкладки мгновенный: цвет и подсветка без плавного перехода */
+html { touch-action: manipulation; }
+.nav-item { transition: transform var(--t-press) var(--ease-out); }
 .nav-item:active { transform: scale(0.94); }
-.nav-item svg { transition: transform var(--t-ui) var(--ease-out); }
-.nav-item[aria-current="page"] svg { transform: translateY(-1px); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation: none !important; scroll-behavior: auto !important; }

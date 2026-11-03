@@ -746,44 +746,24 @@ function markNav(r) {
   });
 }
 
-// Смена экрана с анимацией: экран собирается по блокам сверху вниз,
-// строки внутри блоков догоняют каскадом. fwd/back — лёгкий сдвиг в сторону вкладки, fade — без сдвига.
+// Появление экрана: одно и то же на всех вкладках. Блоки по очереди, всё укладывается примерно в 0,4 с.
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
-const ROWS = '.days button, .item, .lesson,.ex, .strip-block, .wk-cell, .wk-day, .ledger-row, .dish, .ahead-row, .check-line, .fold, .plan, .well-row, .mini li, .rules li';
-let enterTimer = null;
 
-function enter(dir) {
-  const main = document.getElementById('main');
-  main.classList.remove('enter');
-  const blocks = [...main.querySelectorAll(':scope > *, :scope > .grid > *, :scope > .grid > .stack > *')]
-    .filter(el => !el.classList.contains('grid') && !el.classList.contains('stack'));
-  blocks.forEach((el, i) => {
-    el.classList.add('rise');
-    el.style.setProperty('--i', Math.min(i, 9));
-    // только видимые строки: скрытая на телефоне сетка недели не должна занимать очередь;
-    // длинные списки не обрезаются — всё после 12-й строки приходит вместе с ней
-    [...el.querySelectorAll(ROWS)].filter(r => r.getClientRects().length).forEach((r, j) => {
-      r.classList.add('rise-row');
-      r.style.setProperty('--j', Math.min(j, 11));
-    });
-  });
-  main.style.setProperty('--dx', dir === 'fwd' ? '12px' : dir === 'back' ? '-12px' : '0px');
-  void main.offsetWidth; // перезапуск анимаций
-  main.classList.add('enter');
-  clearTimeout(enterTimer);
-  enterTimer = setTimeout(() => main.classList.remove('enter'), 1800);
+function enter() {
+  const blocks = document.getElementById('main').querySelectorAll(':scope > :not(.grid), :scope > .grid > :not(.stack), :scope > .grid > .stack > *');
+  blocks.forEach((el, i) => { el.style.setProperty('--i', Math.min(i, 5)); el.classList.add('rise'); });
 }
 
-function animated(dir, update) {
+function animated(update) {
   update();
-  if (!reduceMotion.matches) enter(dir);
+  if (!reduceMotion.matches) enter();
 }
+
+const openScreen = () => animated(() => { render(); scrollTo(0, 0); });
 
 function switchTo(r) {
-  const from = TABS.findIndex(t => t[0] === lastRoute), to = TABS.findIndex(t => t[0] === r);
   if (r !== 'projects') ui.project = null;
-  markNav(r); // подсветка вкладки — сразу, до перерисовки
-  animated(to >= from ? 'fwd' : 'back', () => { render(); scrollTo(0, 0); });
+  openScreen();
 }
 
 let lastRoute = null;
@@ -848,8 +828,8 @@ const ACTIONS = {
   foodDay(el) { ui.foodDay = +el.dataset.v; return 'fade'; },
   gymW(el) { ui.gymW = el.dataset.v; return 'fade'; },
   openGym(el) { ui.gymW = el.dataset.v; history.pushState(null, '', '#gym'); switchTo('gym'); return false; },
-  openProject(el) { ui.project = el.dataset.id; animated('fwd', () => { render(); scrollTo(0, 0); }); return false; },
-  closeProject() { ui.project = null; animated('back', () => { render(); scrollTo(0, 0); }); return false; },
+  openProject(el) { ui.project = el.dataset.id; openScreen(); return false; },
+  closeProject() { ui.project = null; openScreen(); return false; },
   focusTask() { focusField('task-text'); return false; },
   focusProject() { focusField('p-name'); return false; },
   renameProject(el) {
@@ -875,19 +855,38 @@ document.addEventListener('click', e => {
   if (el.tagName === 'A') e.preventDefault();
   const res = fn(el, e);
   if (res === false) return;
-  if (res === 'fade') { animated('fade', render); return; }
+  if (res === 'fade') { animated(render); return; }
   if (res !== 'ui') save();
   render();
 });
 
-// вкладки: без ожидания hashchange — подсветка и экран сразу по нажатию
+// вкладки срабатывают в момент касания, а не после отпускания пальца; click остаётся для клавиатуры
+let tappedTab = false;
+
+function openTab(tab) {
+  if (tab === route()) {
+    if (ui.project) { ui.project = null; openScreen(); } // из проекта — обратно к списку
+    else scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+  history.pushState(null, '', '#' + tab);
+  switchTo(tab);
+}
+
+document.addEventListener('pointerdown', e => {
+  const a = e.target.closest('a[data-tab]');
+  if (!a || e.button !== 0 || e.metaKey || e.ctrlKey) return;
+  tappedTab = true;
+  setTimeout(() => { tappedTab = false; }, 800);
+  openTab(a.dataset.tab);
+});
+
 document.addEventListener('click', e => {
   const a = e.target.closest('a[data-tab]');
   if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey) return;
   e.preventDefault();
-  if (a.dataset.tab === route() && !ui.project) { scrollTo({ top: 0, behavior: 'smooth' }); return; }
-  history.pushState(null, '', '#' + a.dataset.tab);
-  switchTo(a.dataset.tab);
+  if (tappedTab) { tappedTab = false; return; }
+  openTab(a.dataset.tab);
 });
 
 const FORMS = {
@@ -946,4 +945,4 @@ if ('serviceWorker' in navigator) {
 }
 
 renderShell();
-animated('fade', render);
+animated(render);
