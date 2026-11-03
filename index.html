@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Распорядок</title>
+  <meta name="description" content="Учёба, питание, зал и личные проекты на один день">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Распорядок">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Literata:opsz,wght@7..72,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar"></aside>
+    <header class="topbar">
+      <a class="topbar-brand" href="#today" aria-label="Распорядок, на главную">
+        <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#1b6e66"/><path d="M8.5 10.5l2 2 3.5-4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 10.5h6.5M10 16h13.5M10 21.5h13.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>
+        <span id="topbar-title">Сегодня</span>
+      </a>
+      <a class="icon-btn" href="#settings" aria-label="Настройки"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></a>
+    </header>
+    <main class="canvas"><div class="column" id="main"></div></main>
+    <nav class="tabbar" id="tabbar" aria-label="Разделы"></nav>
+  </div>
+  <div id="timer" class="timer" role="status" hidden></div>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <script src="data.js"></script>
+  <script src="charts.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
