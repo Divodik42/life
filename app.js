@@ -780,7 +780,13 @@ function riseBlocks(blocks, dir) {
   });
 }
 
+// Анимация смены вкладки: одно короткое проявление экрана — самый лёгкий вариант.
+// Другие режимы нужны для замера на телефоне (runDiag).
+let tabAnim = 'fade';
+
 function enter(dir) {
+  if (tabAnim === 'none') return;
+  if (tabAnim === 'fade') { screens[route()].el.animate([{ opacity: 0 }, {}], { duration: 160, easing: 'ease-out' }); return; }
   riseBlocks(screens[route()].el.querySelectorAll(':scope > :not(.grid), :scope > .grid > :not(.stack), :scope > .grid > .stack > *'), dir);
 }
 
@@ -990,6 +996,70 @@ document.addEventListener('click', e => {
   if (tappedTab) { tappedTab = false; return; }
   openTab(a.dataset.tab);
 });
+
+// ---------- Замер на самом телефоне: три нажатия на лого ----------
+const APP_VERSION = 13;
+let brandTaps = 0, brandTimer = null;
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.topbar-brand, .brand')) return;
+  e.preventDefault();
+  brandTaps++;
+  clearTimeout(brandTimer);
+  brandTimer = setTimeout(() => { brandTaps = 0; }, 900);
+  if (brandTaps === 1) openTab('today'); // обычное нажатие на лого, как и раньше, ведёт на главную
+  if (brandTaps === 3) { brandTaps = 0; runDiag(); }
+});
+
+async function runDiag() {
+  const raf = () => new Promise(res => requestAnimationFrame(res));
+  const pill = document.getElementById('toast');
+  const say = text => { pill.textContent = text; pill.hidden = false; clearTimeout(toastTimer); };
+  const sampleTab = async tab => {
+    const frames = []; const t0 = performance.now(); let last = t0, shown = null;
+    openTab(tab);
+    while (performance.now() - t0 < 750) {
+      await raf();
+      const n = performance.now(); frames.push(n - last); last = n;
+      if (shown === null && lastRoute === tab) shown = n - t0;
+    }
+    return { frames, shown: shown ?? 750 };
+  };
+  const median = xs => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
+  const saved = tabAnim, rows = [];
+  const order = ['study', 'food', 'gym', 'projects', 'today'];
+  for (const [mode, label] of [['none', 'Без анимации'], ['fade', 'Проявление'], ['wave', 'Волна']]) {
+    tabAnim = mode;
+    const res = [];
+    for (let round = 0; round < 2; round++) for (const tab of order) {
+      say(`Замер, ничего не нажимай: ${label}`);
+      res.push(await sampleTab(tab));
+    }
+    const frames = res.flatMap(r => r.frames);
+    rows.push({ label, shown: Math.round(median(res.map(r => r.shown))), worst: Math.round(Math.max(...frames)),
+      jank: (frames.filter(f => f > 34).length / res.length).toFixed(1), fps: Math.round(frames.length / (frames.reduce((a, b) => a + b, 0) / 1000)) });
+  }
+  tabAnim = saved;
+  // прокрутка: без неё непонятно, тормозит ли всё приложение или только вкладки
+  say('Замер, ничего не нажимай: прокрутка');
+  openTab('food'); await new Promise(r => setTimeout(r, 400));
+  const sf = []; let sl = performance.now(); const s0 = sl;
+  while (performance.now() - s0 < 1500) { scrollBy(0, 12); await raf(); const n = performance.now(); sf.push(n - sl); sl = n; }
+  scrollTo(0, 0);
+  pill.hidden = true;
+  const caches_ = window.caches ? (await caches.keys()).join(', ') : '—';
+  const box = document.createElement('div');
+  box.className = 'diag';
+  box.innerHTML = `<h2>Замер телефона</h2>
+    <table><tr><th></th><th>экран, мс</th><th>худший кадр</th><th>рывков</th><th>к/с</th></tr>
+    ${rows.map(r => `<tr><td>${r.label}</td><td>${r.shown}</td><td>${r.worst}</td><td>${r.jank}</td><td>${r.fps}</td></tr>`).join('')}
+    <tr><td>Прокрутка</td><td>—</td><td>${Math.round(Math.max(...sf))}</td><td>${sf.filter(f => f > 34).length}</td><td>${Math.round(sf.length / 1.5)}</td></tr></table>
+    <p>Версия ${APP_VERSION}, кеш ${esc(caches_)}<br>Ядер ${navigator.hardwareConcurrency ?? '—'}, память ${navigator.deviceMemory ?? '—'} ГБ, плотность ${devicePixelRatio}, экран ${screen.width}×${screen.height}<br>${esc(navigator.userAgent)}</p>
+    <button class="btn" data-diag-close>Закрыть</button>`;
+  box.querySelector('[data-diag-close]').addEventListener('click', () => box.remove());
+  document.body.appendChild(box);
+  openTab('today');
+}
 
 // долгое нажатие на ссылку или кнопку не открывает системное меню
 document.addEventListener('contextmenu', e => { if (e.target.closest('a, button')) e.preventDefault(); });

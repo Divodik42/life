@@ -477,6 +477,15 @@ textarea.input.tall { min-height: 220px; }
   .add.wrap .input.date { flex: 1; width: auto; }
 }
 
+/* отчёт замера (три нажатия на лого) */
+.diag { position: fixed; inset: 0; z-index: 50; overflow: auto; padding: calc(var(--safe-t) + 20px) 16px 32px; background: var(--ground); font-size: 14px; line-height: 20px; }
+.diag h2 { font-size: 20px; line-height: 26px; margin-bottom: 14px; }
+.diag table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.diag th { font-weight: 400; color: var(--muted); font-size: 12px; line-height: 16px; text-align: right; padding: 0 0 8px 8px; }
+.diag td { text-align: right; padding: 9px 0 9px 8px; border-top: 1px solid var(--rule); }
+.diag td:first-child { text-align: left; padding-left: 0; }
+.diag p { margin: 16px 0; color: var(--muted); font-size: 12px; line-height: 18px; overflow-wrap: anywhere; }
+
 /* скрытые вкладки: не участвуют в раскладке и отрисовке, но браузер хранит их готовыми */
 .column { position: relative; }
 .screen.off { position: absolute; left: 0; right: 0; top: 0; content-visibility: hidden; pointer-events: none; }
