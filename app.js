@@ -740,6 +740,38 @@ function renderShell() {
   document.getElementById('tabbar').innerHTML = nav;
 }
 
+function markNav(r) {
+  document.querySelectorAll('[data-tab]').forEach(a => {
+    if (a.dataset.tab === r) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+  });
+}
+
+// Смена экрана с анимацией: сдвиг в сторону вкладки (fwd/back) или мягкое проявление (fade)
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+function animated(dir, update) {
+  if (reduceMotion.matches) { update(); return; }
+  document.documentElement.dataset.dir = dir;
+  if (document.startViewTransition) {
+    // страховка: если браузер не дал кадр (фон, экономия), экран меняется без анимации
+    let done = false; const run = () => { if (!done) { done = true; update(); } };
+    const vt = document.startViewTransition(run);
+    setTimeout(() => { if (!done) { vt.skipTransition?.(); run(); } }, 250);
+    return;
+  }
+  update();
+  const dx = dir === 'fwd' ? 14 : dir === 'back' ? -14 : 0;
+  document.getElementById('main').animate(
+    [{ opacity: 0, transform: `translate(${dx}px, ${dir === 'fade' ? 6 : 0}px)` }, { opacity: 1, transform: 'none' }],
+    { duration: dir === 'fade' ? 160 : 220, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
+}
+
+function switchTo(r) {
+  const from = TABS.findIndex(t => t[0] === lastRoute), to = TABS.findIndex(t => t[0] === r);
+  if (r !== 'projects') ui.project = null;
+  markNav(r); // подсветка вкладки — сразу, до перерисовки
+  animated(to >= from ? 'fwd' : 'back', () => { render(); scrollTo(0, 0); });
+}
+
 let lastRoute = null;
 function render() {
   const r = route();
@@ -748,9 +780,7 @@ function render() {
   main.innerHTML = VIEWS[r]();
   if (open.size) main.querySelectorAll('details > summary').forEach(s => { if (open.has(s.textContent)) s.parentElement.open = true; });
   lastRoute = r;
-  document.querySelectorAll('[data-tab]').forEach(a => {
-    if (a.dataset.tab === r) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
-  });
+  markNav(r);
   document.getElementById('topbar-title').textContent = TITLES[r];
   document.title = r === 'today' ? 'Распорядок' : `${TITLES[r]} · Распорядок`;
   drawWeightChart();
@@ -799,13 +829,13 @@ const ACTIONS = {
   },
   restAdd() { timer.end += 30000; tickRest(); return false; },
   restStop() { stopRest(); return false; },
-  studyWeek(el) { ui.studyWeek = +el.dataset.v; return 'ui'; },
-  studyDay(el) { ui.studyDay = +el.dataset.v; return 'ui'; },
-  foodDay(el) { ui.foodDay = +el.dataset.v; return 'ui'; },
-  gymW(el) { ui.gymW = el.dataset.v; return 'ui'; },
-  openGym(el) { ui.gymW = el.dataset.v; location.hash = 'gym'; return false; },
-  openProject(el) { ui.project = el.dataset.id; scrollTo(0, 0); return 'ui'; },
-  closeProject() { ui.project = null; return 'ui'; },
+  studyWeek(el) { ui.studyWeek = +el.dataset.v; return 'fade'; },
+  studyDay(el) { ui.studyDay = +el.dataset.v; return 'fade'; },
+  foodDay(el) { ui.foodDay = +el.dataset.v; return 'fade'; },
+  gymW(el) { ui.gymW = el.dataset.v; return 'fade'; },
+  openGym(el) { ui.gymW = el.dataset.v; history.pushState(null, '', '#gym'); switchTo('gym'); return false; },
+  openProject(el) { ui.project = el.dataset.id; animated('fwd', () => { render(); scrollTo(0, 0); }); return false; },
+  closeProject() { ui.project = null; animated('back', () => { render(); scrollTo(0, 0); }); return false; },
   focusTask() { focusField('task-text'); return false; },
   focusProject() { focusField('p-name'); return false; },
   renameProject(el) {
@@ -831,8 +861,19 @@ document.addEventListener('click', e => {
   if (el.tagName === 'A') e.preventDefault();
   const res = fn(el, e);
   if (res === false) return;
+  if (res === 'fade') { animated('fade', render); return; }
   if (res !== 'ui') save();
   render();
+});
+
+// вкладки: без ожидания hashchange — подсветка и экран сразу по нажатию
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[data-tab]');
+  if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey) return;
+  e.preventDefault();
+  if (a.dataset.tab === route() && !ui.project) { scrollTo({ top: 0, behavior: 'smooth' }); return; }
+  history.pushState(null, '', '#' + a.dataset.tab);
+  switchTo(a.dataset.tab);
 });
 
 const FORMS = {
@@ -876,10 +917,8 @@ document.addEventListener('input', e => {
   bindTimer = setTimeout(save, 300);
 });
 
-window.addEventListener('hashchange', () => {
-  if (route() !== 'projects') ui.project = null;
-  render(); scrollTo(0, 0);
-});
+// кнопка «назад» и обычные ссылки вида #food
+window.addEventListener('hashchange', () => switchTo(route()));
 
 const idle = () => !document.activeElement?.matches('input, textarea, select');
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && idle()) render(); });

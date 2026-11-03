@@ -472,6 +472,24 @@ textarea.input.tall { min-height: 220px; }
   .add.wrap .input.date { flex: 1; width: auto; }
 }
 
+/* ---------- переключение экранов (View Transitions) ----------
+   Анимируется только содержимое экрана; меню, шапка и таймер стоят на месте. */
+#main { view-transition-name: screen; }
+::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+::view-transition-group(screen) { animation-duration: 240ms; }
+::view-transition-old(screen) { animation: vt-out 140ms ease-in both; }
+::view-transition-new(screen) { animation: vt-in 240ms var(--ease-out) both; }
+:root { --vt-x: 14px; --vt-y: 0px; }
+:root[data-dir="back"] { --vt-x: -14px; }
+:root[data-dir="fade"] { --vt-x: 0px; --vt-y: 6px; }
+@keyframes vt-out { to { opacity: 0; transform: translate(calc(var(--vt-x) * -0.6), 0); } }
+@keyframes vt-in { from { opacity: 0; transform: translate(var(--vt-x), var(--vt-y)); } }
+
+.nav-item { transition: background-color var(--t-hover) ease, color var(--t-hover) ease, transform var(--t-press) var(--ease-out); }
+.nav-item:active { transform: scale(0.94); }
+.nav-item svg { transition: transform var(--t-ui) var(--ease-out); }
+.nav-item[aria-current="page"] svg { transform: translateY(-1px); }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation: none !important; scroll-behavior: auto !important; }
 }
