@@ -4,27 +4,30 @@
    4 × 263 + 3 × 16 = 1100 — внутренние края рядов совпадают по линиям колонок. */
 
 :root {
-  --ground: #ffffff;
-  --surface: #f2f4f2;      /* лицо продукта: холодный камень вместо #f9f9f9 */
-  --raised: #ffffff;
-  --active: #e7eae7;
-  --border: #e3e6e3;
-  --rule: #e9ece9;
-  --control: #d3d7d2;
-  --text: #1f201d;
-  --muted: #5d5f5b;
-  --faint: #6a6c68;
-  --accent: #1b6e66;
-  --accent-pale: #dcebe8;
-  --accent-ink: #0f4a44;
-  --primary: #1f201d;
-  --primary-ink: #ffffff;
-  --positive: #2e7d32;
-  --negative: #b42318;
-  --pill-negative-bg: #fdecea; --pill-negative-ink: #7a1d14;
-  --pill-neutral-bg: #e6e9e6; --pill-neutral-ink: #3d3d3a;
-  --chart-1: #1b6e66; --chart-2: #1f201d; --chart-3: #8c8c88; --chart-muted: #c4c8c3;
-  --grid: #e3e6e3; --axis-ink: #5d5f5b; --ink: #1f201d;
+  /* тёмная тема по app-screens §9.3: нейтральный почти чёрный, поверхности — шагом яркости, без синевы */
+  --ground: #0e0f0e;
+  --surface: #171817;      /* панели: один шаг светлее земли */
+  --raised: #1f211f;       /* строки-карточки внутри панелей */
+  --active: #2a2c2a;
+  --border: #2a2d2a;
+  --rule: #242624;
+  --control: #474a47;
+  --text: #f1f2f0;
+  --muted: #b4b6b2;
+  --faint: #959793;
+  --on-text: #0e0f0e;      /* надписи на заливке цветом текста */
+  --accent: #4fb3a7;       /* бирюза, осветлённая для тёмного фона: линии, текст, рамки */
+  --accent-fill: #237a70;  /* бирюза-заливка под белым текстом */
+  --accent-pale: #16302d;
+  --accent-ink: #9fd8d0;
+  --primary: #f1f2f0;      /* главная кнопка инвертирована: светлая заливка, тёмная надпись */
+  --primary-ink: #0e0f0e;
+  --positive: #4cc38a;
+  --negative: #ef6b5e;
+  --pill-negative-bg: #3a1d1a; --pill-negative-ink: #ff9b8f;
+  --pill-neutral-bg: #2a2c2a; --pill-neutral-ink: #e2e3e0;
+  --chart-1: #4fb3a7; --chart-2: #f1f2f0; --chart-3: #8c8c88; --chart-muted: #4a4c4a;
+  --grid: #2b2d2b; --axis-ink: #b4b6b2; --ink: #f1f2f0;
 
   --font: "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --serif: "Literata", Georgia, "Times New Roman", serif;
@@ -39,7 +42,7 @@
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --t-press: 120ms; --t-hover: 150ms; --t-ui: 200ms;
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -154,13 +157,13 @@ svg { display: block; }
 
 .tick {
   flex: none; width: 26px; height: 26px; border-radius: 50%; padding: 0; display: grid; place-items: center;
-  border: 1.5px solid #a9ada8; background: transparent; color: transparent;
+  border: 1.5px solid #5c5f5c; background: transparent; color: transparent;
   transition: background-color var(--t-ui) ease, border-color var(--t-ui) ease, transform var(--t-press) var(--ease-out);
 }
 .tick svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .tick:hover { border-color: var(--text); }
 .tick:active { transform: scale(0.9); }
-.tick[aria-pressed="true"], .done > .tick, .check-line.done .tick { background: var(--text); border-color: var(--text); color: #fff; }
+.tick[aria-pressed="true"], .done > .tick, .check-line.done .tick { background: var(--text); border-color: var(--text); color: var(--on-text); }
 .tick.small { width: 20px; height: 20px; }
 .tick.small svg { width: 13px; height: 13px; }
 
@@ -174,8 +177,8 @@ svg { display: block; }
 .btn:hover { background: var(--surface); }
 .btn:active { transform: scale(0.97); }
 .btn.primary { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
-.btn.primary:hover { background: #3a3b37; }
-.btn.negative { color: var(--negative); border-color: #efc4bf; }
+.btn.primary:hover { background: #d6d8d4; }
+.btn.negative { color: var(--negative); border-color: #5a2a25; }
 .btn.negative:hover { background: var(--pill-negative-bg); }
 .btn.round { width: var(--control-height); padding: 0; flex: none; }
 .btn.round.sm { width: 32px; height: 32px; }
@@ -191,7 +194,7 @@ svg { display: block; }
 .input:focus { border-color: var(--text); }
 .input::placeholder { color: var(--faint); }
 select.input { appearance: none; padding-right: 36px; background: var(--raised) var(--chevron-down) right 14px center / 12px no-repeat; }
-:root { --chevron-down: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%235d5f5b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+:root { --chevron-down: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23b4b6b2' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
 textarea.input { display: block; width: 100%; height: auto; min-height: 120px; padding: 12px 14px; border-radius: var(--radius-item); line-height: 22px; resize: vertical; }
 textarea.input.tall { min-height: 220px; }
 .input.date { flex: none; width: 150px; padding: 0 12px; font-size: 14px; color: var(--muted); }
@@ -222,14 +225,14 @@ textarea.input.tall { min-height: 220px; }
 .strip-slot { position: absolute; top: 0; bottom: 0; background: var(--surface); border-radius: 10px; }
 .strip-block {
   position: absolute; top: 0; bottom: 0; padding: 10px 10px; border-radius: 10px; overflow: hidden;
-  background: var(--accent); color: #d9ebe8; display: flex; flex-direction: column; gap: 1px; font-size: 12px; line-height: 16px;
+  background: var(--accent-fill); color: #cfe9e5; display: flex; flex-direction: column; gap: 1px; font-size: 12px; line-height: 16px;
 }
 .strip-block b { color: #fff; font-size: 14px; line-height: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .strip-block span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* прошедшая пара — бледная бирюза, текущая — тёмная, впереди — полный тон */
-.strip-block.past { background: #a8cec8; color: var(--accent-ink); }
+.strip-block.past { background: #1d3b38; color: var(--accent-ink); }
 .strip-block.past b { color: var(--accent-ink); }
-.strip-block.now { background: var(--accent-ink); }
+.strip-block.now { background: #5cc4b7; color: #0b3531; }
 .strip-now { position: absolute; top: -26px; bottom: -4px; width: 0; border-left: 1.5px solid var(--accent); }
 .strip-now span { position: absolute; top: 0; left: 6px; color: var(--accent); font-size: 12px; line-height: 16px; font-weight: 600; }
 .strip-axis { position: relative; height: 16px; margin-top: 8px; }
@@ -257,7 +260,7 @@ textarea.input.tall { min-height: 220px; }
 .mini li.done { color: var(--muted); text-decoration: line-through; }
 .figure { font-size: var(--fs-kpi); line-height: 36px; letter-spacing: -0.02em; margin-bottom: 10px; }
 
-.track { height: 8px; border-radius: 999px; background: #dfe3df; overflow: hidden; }
+.track { height: 8px; border-radius: 999px; background: #2a2d2a; overflow: hidden; }
 .track span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width var(--t-ui) var(--ease-out); }
 
 /* ---------- неделя ---------- */
@@ -272,10 +275,10 @@ textarea.input.tall { min-height: 220px; }
 .wk-cell b { color: var(--text); font-size: 14px; line-height: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wk-cell span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wk-cell.past { opacity: 0.55; }
-.wk-cell.now { background: var(--accent); border-color: var(--accent); color: #d9ebe8; }
-.wk-cell.now b { color: #fff; }
+.wk-cell.now { background: #5cc4b7; border-color: #5cc4b7; color: #0b3531; }
+.wk-cell.now b { color: #062b27; }
 .wk-free { min-height: 76px; border-radius: 12px; }
-.wk-free.today { background: #e9eeec; }
+.wk-free.today { background: #1b1d1b; }
 
 /* ---------- раскрывашки ---------- */
 .folds { display: grid; }
@@ -368,7 +371,7 @@ textarea.input.tall { min-height: 220px; }
 }
 .set:hover { border-color: var(--text); color: var(--text); }
 .set:active { transform: scale(0.9); }
-.set[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: #fff; }
+.set[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: var(--on-text); }
 .kg { display: flex; align-items: center; gap: 6px; color: var(--muted); }
 .kg .input { width: 76px; padding: 0 8px; text-align: center; }
 
@@ -397,18 +400,18 @@ textarea.input.tall { min-height: 220px; }
   position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 30;
   display: flex; align-items: center; gap: 8px; width: min(380px, calc(100% - 32px)); padding: 8px 8px 8px 20px;
   background: var(--raised); border: 1px solid var(--border); border-radius: 999px;
-  box-shadow: 0 10px 30px rgba(20, 24, 20, 0.14); /* taste-skill-ignore: таймер плавает над экраном */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); /* taste-skill-ignore: таймер плавает над экраном */
 }
-.timer.done { background: var(--accent); border-color: var(--accent); color: #fff; }
-.timer.done .timer-text span { color: #d9ebe8; }
+.timer.done { background: var(--accent-fill); border-color: var(--accent-fill); color: #fff; }
+.timer.done .timer-text span { color: #cfe9e5; }
 .timer-text { flex: 1; display: flex; flex-direction: column; }
 .timer-text b { font-size: 22px; line-height: 26px; font-weight: 500; }
 .timer-text span { color: var(--muted); font-size: 12px; line-height: 16px; }
 .toast {
   position: fixed; left: 50%; top: calc(var(--safe-t) + 16px); transform: translateX(-50%); z-index: 40;
   display: flex; align-items: center; gap: 12px; max-width: calc(100% - 32px); width: max-content; padding: 8px 8px 8px 18px;
-  background: var(--primary); color: #fff; border-radius: 999px;
-  box-shadow: 0 10px 30px rgba(20, 24, 20, 0.18); /* taste-skill-ignore: уведомление плавает над экраном */
+  background: var(--primary); color: var(--on-text); border-radius: 999px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); /* taste-skill-ignore: уведомление плавает над экраном */
 }
 /* левая колонка из двух панелей считается одним блоком и доходит до низа ряда */
 .stack { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; align-self: stretch; }
@@ -419,7 +422,7 @@ textarea.input.tall { min-height: 220px; }
 .ahead-row > span:first-child { font-weight: 500; }
 .ahead-row > span:last-child { color: var(--muted); }
 .ahead-row b { font-weight: 500; color: var(--text); }
-.toast .btn { height: 32px; background: #3a3b37; border-color: #3a3b37; color: #fff; }
+.toast .btn { height: 32px; background: #d6d8d4; border-color: #d6d8d4; color: var(--on-text); }
 
 /* ---------- планшет: боковая панель складывается, широкие пролёты держатся ---------- */
 @media (max-width: 1080px) {

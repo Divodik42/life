@@ -98,7 +98,7 @@ const ICON = {
   plus: I('<path d="M12 6v12M6 12h12"/>'),
   minus: I('<path d="M6 12h12"/>'),
 };
-const MARK = '<svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--accent)"/><path d="M8.5 10.5l2 2 3.5-4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 10.5h6.5M10 16h13.5M10 21.5h13.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>';
+const MARK = '<svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--accent-fill)"/><path d="M8.5 10.5l2 2 3.5-4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 10.5h6.5M10 16h13.5M10 21.5h13.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>';
 
 // ---------- Маршруты и состояние интерфейса ----------
 const TABS = [['today', 'Сегодня'], ['study', 'Учёба'], ['food', 'Питание'], ['gym', 'Зал'], ['projects', 'Проекты']];
