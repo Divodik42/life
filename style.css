@@ -472,18 +472,15 @@ textarea.input.tall { min-height: 220px; }
   .add.wrap .input.date { flex: 1; width: auto; }
 }
 
-/* ---------- переключение экранов (View Transitions) ----------
-   Анимируется только содержимое экрана; меню, шапка и таймер стоят на месте. */
-#main { view-transition-name: screen; }
-::view-transition-old(root), ::view-transition-new(root) { animation: none; }
-::view-transition-group(screen) { animation-duration: 240ms; }
-::view-transition-old(screen) { animation: vt-out 140ms ease-in both; }
-::view-transition-new(screen) { animation: vt-in 240ms var(--ease-out) both; }
-:root { --vt-x: 14px; --vt-y: 0px; }
-:root[data-dir="back"] { --vt-x: -14px; }
-:root[data-dir="fade"] { --vt-x: 0px; --vt-y: 6px; }
-@keyframes vt-out { to { opacity: 0; transform: translate(calc(var(--vt-x) * -0.6), 0); } }
-@keyframes vt-in { from { opacity: 0; transform: translate(var(--vt-x), var(--vt-y)); } }
+/* ---------- появление экрана ----------
+   Блоки поднимаются по очереди (--i), строки внутри них — каскадом (--j), полосы прогресса растут.
+   Только transform и opacity; при «уменьшить движение» JS анимацию не включает. */
+.enter .rise { animation: rise 460ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 55ms); }
+.enter .rise-row { animation: rise-row 380ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 55ms + 110ms + var(--j, 0) * 32ms); }
+.enter .rise .track span { animation: grow 800ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 55ms + 200ms); transform-origin: left center; }
+@keyframes rise { from { opacity: 0; transform: translate(var(--dx, 0px), 16px); } }
+@keyframes rise-row { from { opacity: 0; transform: translateY(8px); } }
+@keyframes grow { from { transform: scaleX(0); } }
 
 .nav-item { transition: background-color var(--t-hover) ease, color var(--t-hover) ease, transform var(--t-press) var(--ease-out); }
 .nav-item:active { transform: scale(0.94); }

@@ -1,6 +1,6 @@
 // Свои файлы: сначала сеть (обновления приходят сразу), без сети — из кеша.
 // Шрифты Google: из кеша, если уже скачаны.
-const CACHE = 'raspisanie-v2-4';
+const CACHE = 'raspisanie-v2-5';
 const FILES = [
   './', './index.html', './style.css', './data.js', './charts.js', './app.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',

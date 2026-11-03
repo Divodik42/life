@@ -746,23 +746,32 @@ function markNav(r) {
   });
 }
 
-// Смена экрана с анимацией: сдвиг в сторону вкладки (fwd/back) или мягкое проявление (fade)
+// Смена экрана с анимацией: экран собирается по блокам сверху вниз,
+// строки внутри блоков догоняют каскадом. fwd/back — лёгкий сдвиг в сторону вкладки, fade — без сдвига.
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const ROWS = '.item, .lesson, .ex, .strip-block, .wk-cell, .wk-day, .ledger-row, .dish, .ahead-row, .check-line, .fold, .plan, .well-row, .mini li, .rules li';
+let enterTimer = null;
+
+function enter(dir) {
+  const main = document.getElementById('main');
+  main.classList.remove('enter');
+  const blocks = [...main.querySelectorAll(':scope > *, :scope > .grid > *, :scope > .grid > .stack > *')]
+    .filter(el => !el.classList.contains('grid') && !el.classList.contains('stack'));
+  blocks.forEach((el, i) => {
+    el.classList.add('rise');
+    el.style.setProperty('--i', Math.min(i, 9));
+    [...el.querySelectorAll(ROWS)].slice(0, 12).forEach((r, j) => { r.classList.add('rise-row'); r.style.setProperty('--j', j); });
+  });
+  main.style.setProperty('--dx', dir === 'fwd' ? '12px' : dir === 'back' ? '-12px' : '0px');
+  void main.offsetWidth; // перезапуск анимаций
+  main.classList.add('enter');
+  clearTimeout(enterTimer);
+  enterTimer = setTimeout(() => main.classList.remove('enter'), 1800);
+}
+
 function animated(dir, update) {
-  if (reduceMotion.matches) { update(); return; }
-  document.documentElement.dataset.dir = dir;
-  if (document.startViewTransition) {
-    // страховка: если браузер не дал кадр (фон, экономия), экран меняется без анимации
-    let done = false; const run = () => { if (!done) { done = true; update(); } };
-    const vt = document.startViewTransition(run);
-    setTimeout(() => { if (!done) { vt.skipTransition?.(); run(); } }, 250);
-    return;
-  }
   update();
-  const dx = dir === 'fwd' ? 14 : dir === 'back' ? -14 : 0;
-  document.getElementById('main').animate(
-    [{ opacity: 0, transform: `translate(${dx}px, ${dir === 'fade' ? 6 : 0}px)` }, { opacity: 1, transform: 'none' }],
-    { duration: dir === 'fade' ? 160 : 220, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
+  if (!reduceMotion.matches) enter(dir);
 }
 
 function switchTo(r) {
@@ -932,4 +941,4 @@ if ('serviceWorker' in navigator) {
 }
 
 renderShell();
-render();
+animated('fade', render);
