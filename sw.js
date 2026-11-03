@@ -1,6 +1,6 @@
 // Запуск всегда из кеша, без ожидания сети: приложение открывается мгновенно и при слабом интернете.
 // В фоне файлы проверяются на обновления — новая версия появится при следующем открытии.
-const CACHE = 'raspisanie-v2-8';
+const CACHE = 'raspisanie-v2-9';
 const FILES = [
   './', './index.html', './style.css', './data.js', './charts.js', './app.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',

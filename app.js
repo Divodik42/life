@@ -113,8 +113,8 @@ function titleRow(h1, sub, right = '', cls = '') {
   return `<div class="title-row"><div class="title-text"><h1 class="${cls}">${h1}</h1>${sub ? `<p class="sub">${sub}</p>` : ''}</div>${right ? `<div class="title-actions">${right}</div>` : ''}</div>`;
 }
 
-function panel(span, title, body, { extra = '', cls = '', id = '' } = {}) {
-  return `<section class="panel s${span} ${cls}"${id ? ` id="${id}"` : ''}><header><h2>${title}</h2>${extra}</header>${body}</section>`;
+function panel(span, title, body, { extra = '', cls = '', id = '', part = '' } = {}) {
+  return `<section class="panel s${span} ${cls}"${id ? ` id="${id}"` : ''}${part ? ` data-part="${part}"` : ''}><header><h2>${title}</h2>${extra}</header>${body}</section>`;
 }
 
 const chip = (n) => `<span class="count num">${n}</span>`;
@@ -498,8 +498,8 @@ function viewStudy() {
     + `<div class="grid">`
     + panel(12, `Неделя ${week}, с ${fmtDate(keyOf(monday))} по ${fmtDate(keyOf(addDays(monday, 5)))}`,
       weekMatrix(week, monday)
-      + `<div class="phone-only">${dayChips}<h3 class="day-title">${DAYS[day]}, ${fmtDate(keyOf(date))}</h3>${lessons.length ? lessonRows(lessons, isToday) : empty('Пар нет.')}</div>`,
-      { extra: `<span class="meta num">${weekCount} ${plural(weekCount, ['пара', 'пары', 'пар'])} за неделю</span>` })
+      + `<div class="phone-only">${dayChips}<div data-part="day"><h3 class="day-title">${DAYS[day]}, ${fmtDate(keyOf(date))}</h3>${lessons.length ? lessonRows(lessons, isToday) : empty('Пар нет.')}</div></div>`,
+      { extra: `<span class="meta num">${weekCount} ${plural(weekCount, ['пара', 'пары', 'пар'])} за неделю</span>`, part: 'week' })
     + `<div class="stack s6">`
     + panel(6, 'Домашка', `<div class="items">${hwHtml || empty('Пока ничего не задано.')}</div>` + hwForm,
       { extra: openHw ? chip(openHw) : '' })
@@ -573,14 +573,14 @@ function viewFood() {
     + `<div class="grid">`
     + panel(9, `${DAYS[day]}${isToday ? ', сегодня' : ''}`,
       `<div class="items">${mealItems(dateKey, true)}</div>`,
-      { extra: `<span class="meta num">${num(m.total.kcal)} ккал · ${m.total.p} г белка</span>`, cls: 'stretch' })
+      { extra: `<span class="meta num">${num(m.total.kcal)} ккал · ${m.total.p} г белка</span>`, cls: 'stretch', part: 'day' })
     + panel(3, 'Итог дня', planRow('Калории', m.got.kcal, m.total.kcal, 'ккал') + planRow('Белок', m.got.p, m.total.p, 'г')
       + `<div class="well"><div class="well-row"><span>Калории в день</span><span class="num">${FOOD_TARGET.kcal}</span></div>
         <div class="well-row"><span>Белок</span><span class="num">${FOOD_TARGET.p} г</span></div>
         <div class="well-row"><span>Жиры</span><span class="num">${FOOD_TARGET.f} г</span></div>
         <div class="well-row"><span>Углеводы</span><span class="num">${FOOD_TARGET.c} г</span></div>
         <div class="well-row"><span>Вода</span><span class="num">2,5–3 л</span></div></div>`
-      + (dayNotes.length ? `<ul class="notes-list">${dayNotes.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : ''), { cls: 'stretch' })
+      + (dayNotes.length ? `<ul class="notes-list">${dayNotes.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : ''), { cls: 'stretch', part: 'day' })
     + panel(6, 'Вес', weightBody, { cls: 'stretch' })
     + panel(6, 'Готовка', cooking, { cls: 'stretch' })
     + panel(6, 'Покупки на неделю', shopping, { extra: `<span class="count num">${shopDone} из ${shopTotal}</span>`, cls: 'stretch' })
@@ -656,7 +656,7 @@ function viewGym() {
   return titleRow('Зал', esc(sub), segmented(WORKOUTS.map(x => [x.id, `${x.name.replace('Тренировка ', 'Т')}, ${DAYS_SHORT[x.day]}`]), wid, 'gymW', 'Тренировка'))
     + `<div class="grid">`
     + panel(9, `${w.name}${planned === wid ? ', сегодня' : `, ${DAYS_SHORT[w.day].toLowerCase()}`}`, `<div class="exs">${ex}</div>`,
-      { extra: `<span class="meta num">${w.ex.length} упражнений · ${pr.total} подходов</span>` })
+      { extra: `<span class="meta num">${w.ex.length} упражнений · ${pr.total} подходов</span>`, part: 'workout' })
     + panel(3, 'Сделано за сегодня', `<div class="figure num">${pr.done}<small> из ${pr.total}</small></div>${track(pr.done, pr.total)}
       <p class="item-meta num">Упражнений закончено: ${pr.exDone} из ${w.ex.length}.</p>
       <h3 class="sub-h">Рабочие веса</h3>
@@ -664,7 +664,7 @@ function viewGym() {
         const kg = gymEntry(t, wid, i)?.kg || last[e.name]?.kg;
         return `<div class="ledger-row"><span class="grow-name" title="${esc(e.name)}">${esc(e.name)}</span><span class="num">${kg ? `${esc(kg)} кг` : '<span class="dash">—</span>'}</span></div>`;
       }).join('')}</div>
-      <ul class="notes-list"><li>Номер подхода запускает отдых.</li><li>Каждые 1–2 недели добавляй вес или повторы.</li><li>Техника ломается, значит вес велик: сбрось его.</li></ul>`, { cls: 'stretch' })
+      <ul class="notes-list"><li>Номер подхода запускает отдых.</li><li>Каждые 1–2 недели добавляй вес или повторы.</li><li>Техника ломается, значит вес велик: сбрось его.</li></ul>`, { cls: 'stretch', part: 'workout' })
     + panel(6, 'Перед тренировкой', `<div class="folds">${info}</div>`, { cls: 'stretch' })
     + panel(6, 'Эта неделя', weekWorkouts() + `<h3 class="sub-h">История</h3>` + historyHtml, { cls: 'stretch' })
     + `</div>`;
@@ -752,12 +752,12 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const UNITS = 'header, .days button, .item, .lesson, .ex, .strip, .wk-day, .wk-cell, .ledger-row, .dish, .ahead-row, .check-line, .fold, .plan, .well-row, .mini li, .rules li, .empty, .add, .figure, .track, textarea';
 const WAVE_MS = 260;
 
-function enter(dir) {
+function riseBlocks(blocks, dir) {
   const main = document.getElementById('main');
   const vh = innerHeight;
   const delay = top => `${Math.round(Math.max(0, Math.min(1, top / vh)) * WAVE_MS)}ms`;
   main.style.setProperty('--dx', dir === 'fwd' ? '12px' : dir === 'back' ? '-12px' : '0px');
-  main.querySelectorAll(':scope > :not(.grid), :scope > .grid > :not(.stack), :scope > .grid > .stack > *').forEach(block => {
+  blocks.forEach(block => {
     const top = block.getBoundingClientRect().top;
     if (top >= vh) return; // ниже экрана — без анимации
     block.style.setProperty('--d', delay(top));
@@ -769,6 +769,18 @@ function enter(dir) {
       row.classList.add('rise-row');
     });
   });
+}
+
+function enter(dir) {
+  riseBlocks(document.getElementById('main').querySelectorAll(':scope > :not(.grid), :scope > .grid > :not(.stack), :scope > .grid > .stack > *'), dir);
+}
+
+// подкатегории: анимируются только плашки, которые от них зависят (data-part)
+const PARTS = { studyWeek: 'week', studyDay: 'day', foodDay: 'day', gymW: 'workout' };
+
+function animatePart(part) {
+  render();
+  if (!reduceMotion.matches) riseBlocks(document.querySelectorAll(`#main [data-part="${part}"]`), 'fade');
 }
 
 function animated(dir, update) {
@@ -841,10 +853,10 @@ const ACTIONS = {
   },
   restAdd() { timer.end += 30000; tickRest(); return false; },
   restStop() { stopRest(); return false; },
-  studyWeek(el) { ui.studyWeek = +el.dataset.v; return 'fade'; },
-  studyDay(el) { ui.studyDay = +el.dataset.v; return 'fade'; },
-  foodDay(el) { ui.foodDay = +el.dataset.v; return 'fade'; },
-  gymW(el) { ui.gymW = el.dataset.v; return 'fade'; },
+  studyWeek(el) { ui.studyWeek = +el.dataset.v; return 'part'; },
+  studyDay(el) { ui.studyDay = +el.dataset.v; return 'part'; },
+  foodDay(el) { ui.foodDay = +el.dataset.v; return 'part'; },
+  gymW(el) { ui.gymW = el.dataset.v; return 'part'; },
   openGym(el) { ui.gymW = el.dataset.v; history.pushState(null, '', '#gym'); switchTo('gym'); return false; },
   openProject(el) { ui.project = el.dataset.id; openScreen('fwd'); return false; },
   closeProject() { ui.project = null; openScreen('back'); return false; },
@@ -873,7 +885,7 @@ document.addEventListener('click', e => {
   if (el.tagName === 'A') e.preventDefault();
   const res = fn(el, e);
   if (res === false) return;
-  if (res === 'fade') { animated('fade', render); return; }
+  if (res === 'part') { animatePart(PARTS[el.dataset.a]); return; }
   if (res !== 'ui') save();
   render();
 });
