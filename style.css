@@ -477,16 +477,6 @@ textarea.input.tall { min-height: 220px; }
   .add.wrap .input.date { flex: 1; width: auto; }
 }
 
-/* ---------- появление экрана ----------
-   Волна сверху вниз: задержка зависит от положения на экране (--d), поэтому все вкладки выглядят одинаково.
-   Анимируется только видимое. Только transform и opacity; при «уменьшить движение» JS анимацию не включает. */
-.rise { animation: rise 420ms var(--ease-out) both; animation-delay: var(--d, 0ms); }
-.rise-row { animation: rise-row 320ms var(--ease-out) both; animation-delay: var(--d, 0ms); }
-.rise .track span { animation: grow 340ms var(--ease-out) both; animation-delay: var(--d, 0ms); transform-origin: left center; }
-@keyframes rise { from { opacity: 0; transform: translate(var(--dx, 0px), 14px); } }
-@keyframes rise-row { from { opacity: 0; transform: translateY(8px); } }
-@keyframes grow { from { transform: scaleX(0); } }
-
 /* вкладки: мгновенная подсветка, никаких системных меню и выделения при долгом нажатии */
 html { touch-action: manipulation; }
 a, button { -webkit-touch-callout: none; }
@@ -494,7 +484,7 @@ a, button { -webkit-touch-callout: none; }
 .nav-item:active { transform: scale(0.94); }
 
 /* панели за пределами экрана не просчитываются при каждой перерисовке (кроме панели с графиком: ему нужна ширина) */
-.grid > .panel:not(:has(.chart)), .stack > .panel { content-visibility: auto; contain-intrinsic-size: auto 320px; }
+.grid > .panel:not(.no-cv), .stack > .panel { content-visibility: auto; contain-intrinsic-size: auto 320px; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation: none !important; scroll-behavior: auto !important; }

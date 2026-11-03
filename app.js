@@ -581,7 +581,7 @@ function viewFood() {
         <div class="well-row"><span>Углеводы</span><span class="num">${FOOD_TARGET.c} г</span></div>
         <div class="well-row"><span>Вода</span><span class="num">2,5–3 л</span></div></div>`
       + (dayNotes.length ? `<ul class="notes-list">${dayNotes.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : ''), { cls: 'stretch', part: 'day' })
-    + panel(6, 'Вес', weightBody, { cls: 'stretch' })
+    + panel(6, 'Вес', weightBody, { cls: 'stretch no-cv' })
     + panel(6, 'Готовка', cooking, { cls: 'stretch' })
     + panel(6, 'Покупки на неделю', shopping, { extra: `<span class="count num">${shopDone} из ${shopTotal}</span>`, cls: 'stretch' })
     + panel(6, 'Правила', `<ul class="rules">${FOOD_RULES.map(s => `<li>${esc(s)}</li>`).join('')}</ul>`, { cls: 'stretch' })
@@ -750,24 +750,33 @@ function markNav(r) {
 // поэтому все вкладки выглядят одинаково. Анимируется только то, что видно; dir — лёгкий сдвиг в сторону вкладки.
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const UNITS = 'header, .days button, .item, .lesson, .ex, .strip, .wk-day, .wk-cell, .ledger-row, .dish, .ahead-row, .check-line, .fold, .plan, .well-row, .mini li, .rules li, .empty, .add, .figure, .track, textarea';
-const WAVE_MS = 260;
+const WAVE_MS = 160;
+const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
+// Сначала все замеры разом, потом запуск: чередование чтения и записи заставляло браузер
+// пересчитывать раскладку на каждой строке. Web Animations не меняют стили и не вызывают их пересчёт.
 function riseBlocks(blocks, dir) {
-  const main = document.getElementById('main');
   const vh = innerHeight;
-  const delay = top => `${Math.round(Math.max(0, Math.min(1, top / vh)) * WAVE_MS)}ms`;
-  main.style.setProperty('--dx', dir === 'fwd' ? '12px' : dir === 'back' ? '-12px' : '0px');
+  const dx = dir === 'fwd' ? 12 : dir === 'back' ? -12 : 0;
+  const delay = top => Math.max(0, Math.min(1, top / vh)) * WAVE_MS;
+  const jobs = [];
   blocks.forEach(block => {
     const top = block.getBoundingClientRect().top;
     if (top >= vh) return; // ниже экрана — без анимации
-    block.style.setProperty('--d', delay(top));
-    block.classList.add('rise');
+    jobs.push({ el: block, wait: delay(top), block: true });
     block.querySelectorAll(UNITS).forEach(row => {
       const r = row.getBoundingClientRect();
-      if (!r.height || r.top >= vh) return;
-      row.style.setProperty('--d', `calc(${delay(r.top)} + 50ms)`);
-      row.classList.add('rise-row');
+      if (r.height && r.top < vh) jobs.push({ el: row, wait: delay(r.top) + 30 });
     });
+  });
+  jobs.forEach(({ el, wait, block }) => {
+    el.animate(
+      [{ opacity: 0, transform: block ? `translate(${dx}px, 12px)` : 'translateY(8px)' }, {}],
+      { duration: block ? 300 : 240, delay: wait, easing: EASE, fill: 'backwards' });
+    if (el.classList.contains('track')) {
+      el.firstElementChild?.animate([{ transform: 'scaleX(0)', transformOrigin: 'left center' }, { transformOrigin: 'left center' }],
+        { duration: 300, delay: wait, easing: EASE, fill: 'backwards' });
+    }
   });
 }
 
@@ -885,7 +894,11 @@ document.addEventListener('click', e => {
   if (el.tagName === 'A') e.preventDefault();
   const res = fn(el, e);
   if (res === false) return;
-  if (res === 'part') { animatePart(PARTS[el.dataset.a]); return; }
+  if (res === 'part') {
+    el.parentElement.querySelectorAll('[aria-pressed]').forEach(b => b.setAttribute('aria-pressed', b === el));
+    afterPaint(() => animatePart(PARTS[el.dataset.a]));
+    return;
+  }
   if (res !== 'ui') save();
   render();
 });
@@ -900,7 +913,20 @@ function openTab(tab) {
     return;
   }
   history.pushState(null, '', '#' + tab);
-  switchTo(tab);
+  markNav(tab);
+  afterPaint(() => switchTo(route()));
+}
+
+// Сначала отклик на нажатие отдельным кадром, потом тяжёлая отрисовка.
+// Нажатия подряд не копятся: выполнится только последнее.
+let afterPaintJob = null;
+function afterPaint(job) {
+  const pending = afterPaintJob;
+  afterPaintJob = job;
+  if (pending) return;
+  const run = () => { const j = afterPaintJob; afterPaintJob = null; if (j) j(); };
+  requestAnimationFrame(() => setTimeout(run, 0));
+  setTimeout(run, 120); // запасной путь, если браузер не дал кадр
 }
 
 document.addEventListener('pointerdown', e => {
