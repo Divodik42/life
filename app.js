@@ -25,7 +25,10 @@ function load() {
 
 let S = load();
 
+let dataVersion = 0;
+
 function save() {
+  dataVersion++;
   try { localStorage.setItem(KEY, JSON.stringify(S)); }
   catch (e) { toast('Не удалось сохранить данные'); }
 }
@@ -591,7 +594,7 @@ function viewFood() {
 
 function drawWeightChart() {
   const el = document.getElementById('weight-chart');
-  if (!el || !window.Charts) return;
+  if (!el || !window.Charts || route() !== 'food') return;
   const ws = [...S.weights].sort((a, b) => a.date.localeCompare(b.date)).slice(-20);
   const short = k => { const d = fromKey(k); return `${d.getDate()}.${pad(d.getMonth() + 1)}`; };
   Charts.line(el, {
@@ -749,7 +752,7 @@ function markNav(r) {
 // Появление экрана: волна сверху вниз. Задержка считается от положения на экране, а не от числа строк,
 // поэтому все вкладки выглядят одинаково. Анимируется только то, что видно; dir — лёгкий сдвиг в сторону вкладки.
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
-const UNITS = 'header, .days button, .item, .lesson, .ex, .strip, .wk-day, .wk-cell, .ledger-row, .dish, .ahead-row, .check-line, .fold, .plan, .well-row, .mini li, .rules li, .empty, .add, .figure, .track, textarea';
+const UNITS = 'header, .days button, .item, .lesson, .ex, .strip, .wk-day, .wk-cell, .ledger-row, .dish, .ahead-row, .check-line, .fold, .plan, .well-row, .mini li, .rules li, .empty, .add, .figure, textarea';
 const WAVE_MS = 160;
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
@@ -763,7 +766,8 @@ function riseBlocks(blocks, dir) {
   blocks.forEach(block => {
     const top = block.getBoundingClientRect().top;
     if (top >= vh) return; // ниже экрана — без анимации
-    jobs.push({ el: block, wait: delay(top), block: true });
+    // большая панель при смене вкладки стоит на месте, двигаются только строки: так меньше тяжёлых слоёв на видеочипе
+    if (dir === 'fade' || !block.classList.contains('panel')) jobs.push({ el: block, wait: delay(top), block: true });
     block.querySelectorAll(UNITS).forEach(row => {
       const r = row.getBoundingClientRect();
       if (r.height && r.top < vh) jobs.push({ el: row, wait: delay(r.top) + 30 });
@@ -771,17 +775,13 @@ function riseBlocks(blocks, dir) {
   });
   jobs.forEach(({ el, wait, block }) => {
     el.animate(
-      [{ opacity: 0, transform: block ? `translate(${dx}px, 12px)` : 'translateY(8px)' }, {}],
+      [{ opacity: 0, transform: block ? `translate(${dx}px, 12px)` : `translate(${dx / 2}px, 8px)` }, {}],
       { duration: block ? 300 : 240, delay: wait, easing: EASE, fill: 'backwards' });
-    if (el.classList.contains('track')) {
-      el.firstElementChild?.animate([{ transform: 'scaleX(0)', transformOrigin: 'left center' }, { transformOrigin: 'left center' }],
-        { duration: 300, delay: wait, easing: EASE, fill: 'backwards' });
-    }
   });
 }
 
 function enter(dir) {
-  riseBlocks(document.getElementById('main').querySelectorAll(':scope > :not(.grid), :scope > .grid > :not(.stack), :scope > .grid > .stack > *'), dir);
+  riseBlocks(screens[route()].el.querySelectorAll(':scope > :not(.grid), :scope > .grid > :not(.stack), :scope > .grid > .stack > *'), dir);
 }
 
 // подкатегории: анимируются только плашки, которые от них зависят (data-part)
@@ -793,7 +793,7 @@ function animatePart(part) {
   tmp.innerHTML = VIEWS[route()]();
   const sel = `[data-part="${part}"]`;
   const fresh = [...tmp.content.querySelectorAll(sel)];
-  document.querySelectorAll(`#main ${sel}`).forEach((el, i) => { if (fresh[i]) el.replaceWith(fresh[i]); });
+  screens[route()].el.querySelectorAll(sel).forEach((el, i) => { if (fresh[i]) el.replaceWith(fresh[i]); });
   if (!reduceMotion.matches) riseBlocks(fresh, 'fade');
 }
 
@@ -806,22 +806,63 @@ const openScreen = dir => animated(dir, () => { render(); scrollTo(0, 0); });
 
 function switchTo(r) {
   const from = TABS.findIndex(t => t[0] === lastRoute), to = TABS.findIndex(t => t[0] === r);
-  if (r !== 'projects') ui.project = null;
-  openScreen(to >= from ? 'fwd' : 'back');
+  if (r !== 'projects' && ui.project) { ui.project = null; if (screens.projects) screens.projects.key = null; }
+  animated(to >= from ? 'fwd' : 'back', () => { showRoute(r); scrollTo(0, 0); });
+}
+
+// Готовые экраны вкладок: DOM каждой вкладки живёт в своём контейнере и просто показывается.
+// Экран строится заново, только если изменились данные, день или (для Сегодня и Учёбы) прошло 5 минут;
+// открытый экран и так обновляется раз в минуту.
+const screens = {};
+const screenKey = r => `${dataVersion}|${today()}|${r === 'today' || r === 'study' ? Math.floor(Date.now() / 300000) : ''}`;
+
+function screenOf(r) {
+  if (!screens[r]) {
+    const el = document.createElement('div');
+    el.className = 'screen off';
+    document.getElementById('main').appendChild(el);
+    screens[r] = { el, key: null };
+  }
+  return screens[r];
+}
+
+function showChrome(r) {
+  Object.entries(screens).forEach(([k, s]) => s.el.classList.toggle('off', k !== r));
+  lastRoute = r;
+  markNav(r);
+  document.getElementById('topbar-title').textContent = TITLES[r];
+  document.title = r === 'today' ? 'Распорядок' : `${TITLES[r]} · Распорядок`;
 }
 
 let lastRoute = null;
 function render() {
   const r = route();
-  const main = document.getElementById('main');
-  const open = r === lastRoute ? new Set([...main.querySelectorAll('details[open] > summary')].map(s => s.textContent)) : new Set();
-  main.innerHTML = VIEWS[r]();
-  if (open.size) main.querySelectorAll('details > summary').forEach(s => { if (open.has(s.textContent)) s.parentElement.open = true; });
-  lastRoute = r;
-  markNav(r);
-  document.getElementById('topbar-title').textContent = TITLES[r];
-  document.title = r === 'today' ? 'Распорядок' : `${TITLES[r]} · Распорядок`;
+  const s = screenOf(r);
+  const open = r === lastRoute ? new Set([...s.el.querySelectorAll('details[open] > summary')].map(x => x.textContent)) : new Set();
+  s.el.innerHTML = VIEWS[r]();
+  s.key = screenKey(r);
+  if (open.size) s.el.querySelectorAll('details > summary').forEach(x => { if (open.has(x.textContent)) x.parentElement.open = true; });
+  showChrome(r);
   drawWeightChart();
+}
+
+// показать вкладку: готовый экран, если он актуален, иначе построить
+function showRoute(r) {
+  const s = screens[r];
+  if (!s || s.key !== screenKey(r)) { render(); return; }
+  showChrome(r);
+  if (r === 'food' && !s.el.querySelector('#weight-chart svg')) drawWeightChart();
+}
+
+// заранее строит остальные вкладки, когда телефон свободен (только разметка, без расчёта раскладки)
+function prebuildScreens() {
+  const idleRun = window.requestIdleCallback || (fn => setTimeout(fn, 200));
+  const next = TABS.map(t => t[0]).find(r => !screens[r]);
+  if (!next) return;
+  idleRun(() => {
+    if (!screens[next]) { const s = screenOf(next); s.el.innerHTML = VIEWS[next](); s.key = screenKey(next); }
+    prebuildScreens();
+  });
 }
 
 // ---------- Тосты и отмена ----------
@@ -1001,7 +1042,10 @@ const idle = () => !document.activeElement?.matches('input, textarea, select');
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && idle()) render(); });
 setInterval(() => { if (['today', 'study'].includes(route()) && idle()) render(); }, 60000);
 let resizeTimer = null;
-window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(drawWeightChart, 150); });
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { if (screens.food && route() !== 'food') screens.food.key = null; drawWeightChart(); }, 150);
+});
 if (document.fonts) document.fonts.ready.then(drawWeightChart);
 
 if ('serviceWorker' in navigator) {
@@ -1013,3 +1057,4 @@ if ('serviceWorker' in navigator) {
 
 renderShell();
 animated('fade', render);
+prebuildScreens();
