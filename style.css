@@ -486,10 +486,6 @@ textarea.input.tall { min-height: 220px; }
 .diag td:first-child { text-align: left; padding-left: 0; }
 .diag p { margin: 16px 0; color: var(--muted); font-size: 12px; line-height: 18px; overflow-wrap: anywhere; }
 
-/* скрытые вкладки: не участвуют в раскладке и отрисовке, но браузер хранит их готовыми */
-.column { position: relative; }
-.screen.off { position: absolute; left: 0; right: 0; top: 0; content-visibility: hidden; pointer-events: none; }
-
 /* вкладки: мгновенная подсветка, никаких системных меню и выделения при долгом нажатии */
 html { touch-action: manipulation; }
 a, button { -webkit-touch-callout: none; }
