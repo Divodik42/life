@@ -28,6 +28,7 @@ let S = load();
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(S)); }
   catch (e) { toast('Не удалось сохранить данные'); }
+  markDirty();
 }
 
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
@@ -113,8 +114,8 @@ function titleRow(h1, sub, right = '', cls = '') {
   return `<div class="title-row"><div class="title-text"><h1 class="${cls}">${h1}</h1>${sub ? `<p class="sub">${sub}</p>` : ''}</div>${right ? `<div class="title-actions">${right}</div>` : ''}</div>`;
 }
 
-function panel(span, title, body, { extra = '', cls = '', id = '' } = {}) {
-  return `<section class="panel s${span} ${cls}"${id ? ` id="${id}"` : ''}><header><h2>${title}</h2>${extra}</header>${body}</section>`;
+function panel(span, title, body, { extra = '', cls = '', id = '', part = '' } = {}) {
+  return `<section class="panel s${span} ${cls}"${id ? ` id="${id}"` : ''}${part ? ` data-part="${part}"` : ''}><header><h2>${title}</h2>${extra}</header>${body}</section>`;
 }
 
 const chip = (n) => `<span class="count num">${n}</span>`;
@@ -498,8 +499,8 @@ function viewStudy() {
     + `<div class="grid">`
     + panel(12, `Неделя ${week}, с ${fmtDate(keyOf(monday))} по ${fmtDate(keyOf(addDays(monday, 5)))}`,
       weekMatrix(week, monday)
-      + `<div class="phone-only">${dayChips}<h3 class="day-title">${DAYS[day]}, ${fmtDate(keyOf(date))}</h3>${lessons.length ? lessonRows(lessons, isToday) : empty('Пар нет.')}</div>`,
-      { extra: `<span class="meta num">${weekCount} ${plural(weekCount, ['пара', 'пары', 'пар'])} за неделю</span>` })
+      + `<div class="phone-only">${dayChips}<div data-part="day"><h3 class="day-title">${DAYS[day]}, ${fmtDate(keyOf(date))}</h3>${lessons.length ? lessonRows(lessons, isToday) : empty('Пар нет.')}</div></div>`,
+      { extra: `<span class="meta num">${weekCount} ${plural(weekCount, ['пара', 'пары', 'пар'])} за неделю</span>`, part: 'week' })
     + `<div class="stack s6">`
     + panel(6, 'Домашка', `<div class="items">${hwHtml || empty('Пока ничего не задано.')}</div>` + hwForm,
       { extra: openHw ? chip(openHw) : '' })
@@ -573,14 +574,14 @@ function viewFood() {
     + `<div class="grid">`
     + panel(9, `${DAYS[day]}${isToday ? ', сегодня' : ''}`,
       `<div class="items">${mealItems(dateKey, true)}</div>`,
-      { extra: `<span class="meta num">${num(m.total.kcal)} ккал · ${m.total.p} г белка</span>`, cls: 'stretch' })
+      { extra: `<span class="meta num">${num(m.total.kcal)} ккал · ${m.total.p} г белка</span>`, cls: 'stretch', part: 'day' })
     + panel(3, 'Итог дня', planRow('Калории', m.got.kcal, m.total.kcal, 'ккал') + planRow('Белок', m.got.p, m.total.p, 'г')
       + `<div class="well"><div class="well-row"><span>Калории в день</span><span class="num">${FOOD_TARGET.kcal}</span></div>
         <div class="well-row"><span>Белок</span><span class="num">${FOOD_TARGET.p} г</span></div>
         <div class="well-row"><span>Жиры</span><span class="num">${FOOD_TARGET.f} г</span></div>
         <div class="well-row"><span>Углеводы</span><span class="num">${FOOD_TARGET.c} г</span></div>
         <div class="well-row"><span>Вода</span><span class="num">2,5–3 л</span></div></div>`
-      + (dayNotes.length ? `<ul class="notes-list">${dayNotes.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : ''), { cls: 'stretch' })
+      + (dayNotes.length ? `<ul class="notes-list">${dayNotes.map(s => `<li>${esc(s)}</li>`).join('')}</ul>` : ''), { cls: 'stretch', part: 'day' })
     + panel(6, 'Вес', weightBody, { cls: 'stretch' })
     + panel(6, 'Готовка', cooking, { cls: 'stretch' })
     + panel(6, 'Покупки на неделю', shopping, { extra: `<span class="count num">${shopDone} из ${shopTotal}</span>`, cls: 'stretch' })
@@ -589,9 +590,12 @@ function viewFood() {
     + `</div>`;
 }
 
-function drawWeightChart() {
+function drawWeightChart(force) {
   const el = document.getElementById('weight-chart');
   if (!el || !window.Charts) return;
+  const key = JSON.stringify(S.weights);
+  if (!force && el.dataset.key === key) return; // график не менялся — не перерисовывать
+  el.dataset.key = key;
   const ws = [...S.weights].sort((a, b) => a.date.localeCompare(b.date)).slice(-20);
   const short = k => { const d = fromKey(k); return `${d.getDate()}.${pad(d.getMonth() + 1)}`; };
   Charts.line(el, {
@@ -656,7 +660,7 @@ function viewGym() {
   return titleRow('Зал', esc(sub), segmented(WORKOUTS.map(x => [x.id, `${x.name.replace('Тренировка ', 'Т')}, ${DAYS_SHORT[x.day]}`]), wid, 'gymW', 'Тренировка'))
     + `<div class="grid">`
     + panel(9, `${w.name}${planned === wid ? ', сегодня' : `, ${DAYS_SHORT[w.day].toLowerCase()}`}`, `<div class="exs">${ex}</div>`,
-      { extra: `<span class="meta num">${w.ex.length} упражнений · ${pr.total} подходов</span>` })
+      { extra: `<span class="meta num">${w.ex.length} упражнений · ${pr.total} подходов</span>`, part: 'workout' })
     + panel(3, 'Сделано за сегодня', `<div class="figure num">${pr.done}<small> из ${pr.total}</small></div>${track(pr.done, pr.total)}
       <p class="item-meta num">Упражнений закончено: ${pr.exDone} из ${w.ex.length}.</p>
       <h3 class="sub-h">Рабочие веса</h3>
@@ -664,7 +668,7 @@ function viewGym() {
         const kg = gymEntry(t, wid, i)?.kg || last[e.name]?.kg;
         return `<div class="ledger-row"><span class="grow-name" title="${esc(e.name)}">${esc(e.name)}</span><span class="num">${kg ? `${esc(kg)} кг` : '<span class="dash">—</span>'}</span></div>`;
       }).join('')}</div>
-      <ul class="notes-list"><li>Номер подхода запускает отдых.</li><li>Каждые 1–2 недели добавляй вес или повторы.</li><li>Техника ломается, значит вес велик: сбрось его.</li></ul>`, { cls: 'stretch' })
+      <ul class="notes-list"><li>Номер подхода запускает отдых.</li><li>Каждые 1–2 недели добавляй вес или повторы.</li><li>Техника ломается, значит вес велик: сбрось его.</li></ul>`, { cls: 'stretch', part: 'workout' })
     + panel(6, 'Перед тренировкой', `<div class="folds">${info}</div>`, { cls: 'stretch' })
     + panel(6, 'Эта неделя', weekWorkouts() + `<h3 class="sub-h">История</h3>` + historyHtml, { cls: 'stretch' })
     + `</div>`;
@@ -746,56 +750,232 @@ function markNav(r) {
   });
 }
 
-// Появление экрана: волна сверху вниз. Задержка считается от положения на экране, а не от числа строк,
-// поэтому все вкладки выглядят одинаково. Анимируется только то, что видно; dir — лёгкий сдвиг в сторону вкладки.
+// ---------- Экраны вкладок ----------
+// Как в обычном приложении: все пять экранов живут постоянно, построены и нарисованы заранее и стоят за краем.
+// Нажатие на вкладку только сдвигает нужный экран на место и запускает волну, ничего не перестраивая.
+// У элементов волны слой есть заранее (data-lay) и не исчезает после анимации: иначе браузер пересобирает
+// слои при старте и конце каждой анимации, это около 50 пересборок на одно нажатие.
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
-const UNITS = 'header, .days button, .item, .lesson, .ex, .strip, .wk-day, .wk-cell, .ledger-row, .dish, .ahead-row, .check-line, .fold, .plan, .well-row, .mini li, .rules li, .empty, .add, .figure, .track, textarea';
-const WAVE_MS = 260;
+const UNITS = 'header, .days button, .item, .lesson, .ex, .strip, .wk-day, .wk-cell, .ledger-row, .dish, .ahead-row, .check-line, .fold, .plan, .well, .mini li, .rules li, .empty, .add, .figure, .track, textarea';
+const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+const TAB_WAVE = { wave: 260, gap: 50, block: 420, blockY: 14, row: 320, rowY: 18, bar: 340 }; // вкладки: весь экран
+const PART_WAVE = { wave: 160, gap: 30, block: 300, blockY: 12, row: 240, rowY: 14, bar: 300 }; // подкатегории: только их плашки
 
-function enter(dir) {
-  const main = document.getElementById('main');
-  const vh = innerHeight;
-  const delay = top => `${Math.round(Math.max(0, Math.min(1, top / vh)) * WAVE_MS)}ms`;
-  main.style.setProperty('--dx', dir === 'fwd' ? '12px' : dir === 'back' ? '-12px' : '0px');
-  main.querySelectorAll(':scope > :not(.grid), :scope > .grid > :not(.stack), :scope > .grid > .stack > *').forEach(block => {
-    const top = block.getBoundingClientRect().top;
+// на телефоне клавиши Tab нет, а inert вызывает пересчёт стилей всего экрана
+const FINE_POINTER = matchMedia('(pointer: fine)').matches;
+const PAST_OPACITY = 0.55; // как у .lesson.past и .wk-cell.past в style.css
+
+const screens = {};
+let lastRoute = null;
+let tabAnim = 'wave'; // 'none' включает только встроенный замер (три нажатия на лого)
+
+function screenOf(r) {
+  if (screens[r]) return screens[r];
+  const el = document.createElement('div');
+  el.className = 'screen off';
+  el.setAttribute('aria-hidden', 'true');
+  el.inert = FINE_POINTER; // с клавиатуры нельзя попасть на скрытый экран
+  el.innerHTML = '<div class="column"></div>';
+  document.getElementById('main').appendChild(el);
+  return screens[r] = { el, col: el.firstChild, built: false, dirty: false, jobs: null };
+}
+
+const blocksOf = s => s.col.querySelectorAll(':scope > :not(.grid), :scope > .grid > :not(.stack), :scope > .grid > .stack > *');
+
+function buildScreen(r) {
+  const s = screenOf(r);
+  s.col.innerHTML = VIEWS[r]();
+  s.built = true; s.dirty = false; s.jobs = null;
+  if (r === 'food') drawWeightChart(true);
+}
+
+// Обновляет на экране только то, что изменилось: остальные элементы и их слои остаются на месте.
+const KEEP_ATTRS = new Set(['data-lay', 'open']);
+let morphMoved = false;
+
+function morphChildren(a, b) {
+  let x = a.firstChild, y = b.firstChild;
+  while (y) {
+    const nextY = y.nextSibling;
+    if (!x) { a.appendChild(y); morphMoved = true; }
+    else if (x.nodeType !== y.nodeType || x.nodeName !== y.nodeName) { const nextX = x.nextSibling; a.replaceChild(y, x); x = nextX; morphMoved = true; }
+    else { morphNode(x, y); x = x.nextSibling; }
+    y = nextY;
+  }
+  while (x) { const n = x.nextSibling; x.remove(); x = n; morphMoved = true; }
+}
+
+function morphNode(x, y) {
+  if (x.nodeType !== 1) { if (x.data !== y.data) x.data = y.data; return; }
+  if (x.id === 'weight-chart') return; // график рисует скрипт, в разметке его нет
+  for (const { name } of [...x.attributes]) if (!KEEP_ATTRS.has(name) && !y.hasAttribute(name)) x.removeAttribute(name);
+  for (const { name, value } of y.attributes) if (!KEEP_ATTRS.has(name) && x.getAttribute(name) !== value) x.setAttribute(name, value);
+  morphChildren(x, y);
+}
+
+function refreshScreen(r) {
+  const s = screenOf(r);
+  if (!s.built) { buildScreen(r); return; }
+  const tmp = document.createElement('template');
+  tmp.innerHTML = VIEWS[r]();
+  morphMoved = false;
+  morphChildren(s.col, tmp.content);
+  s.dirty = false;
+  if (morphMoved) s.jobs = null;
+  if (r === 'food') drawWeightChart();
+}
+
+// Волна сверху вниз. Задержка считается от положения на экране, а не от числа строк, поэтому все вкладки
+// выглядят одинаково. Анимируется только то, что видно. Сначала все замеры, потом запись.
+function collectRows(node, out) {
+  for (const child of node.children) {
+    if (child.matches(UNITS)) out.push(child);
+    else if (child.querySelector(UNITS)) collectRows(child, out);
+    else out.push(child);
+  }
+}
+
+function collectJobs(blocks, scrollTop = 0) {
+  const vh = innerHeight, jobs = [];
+  const add = (el, top, kind) => jobs.push({ el, kind, at: Math.max(0, Math.min(1, top / vh)) });
+  blocks.forEach(block => {
+    const top = block.getBoundingClientRect().top + scrollTop;
     if (top >= vh) return; // ниже экрана — без анимации
-    block.style.setProperty('--d', delay(top));
-    block.classList.add('rise');
-    block.querySelectorAll(UNITS).forEach(row => {
+    const rows = [];
+    // у панели отдельно движется фон (::before) и отдельно строки: так не нужна дорогая отрисовка панели в отдельный буфер
+    if (block.classList.contains('panel')) { add(block, top, 'bg'); collectRows(block, rows); }
+    else if (block.querySelector(UNITS)) collectRows(block, rows);
+    else add(block, top, 'block');
+    rows.forEach(row => {
       const r = row.getBoundingClientRect();
-      if (!r.height || r.top >= vh) return;
-      row.style.setProperty('--d', `calc(${delay(r.top)} + 50ms)`);
-      row.classList.add('rise-row');
+      if (r.height && r.top + scrollTop < vh) add(row, r.top + scrollTop, 'row');
     });
   });
+  jobs.forEach(j => {
+    j.el.dataset.lay = '';
+    if (j.kind === 'row') j.bar = j.el.matches('.track') ? j.el.firstElementChild : j.el.querySelector('.track > span');
+    if (j.bar) j.bar.dataset.lay = '';
+  });
+  return jobs;
 }
 
-function animated(dir, update) {
-  update();
-  if (!reduceMotion.matches) enter(dir);
+let waveAnims = [];
+function playWave(jobs, dir, t) {
+  waveAnims.forEach(a => a.cancel());
+  waveAnims = [];
+  if (reduceMotion.matches || tabAnim === 'none') return;
+  const dx = dir === 'fwd' ? 12 : dir === 'back' ? -12 : 0;
+  // Все анимации волны начинаются и заканчиваются вместе, а задержка каждой записана внутри её ключевых кадров.
+  // С обычной задержкой браузер просыпается дважды на каждую анимацию (конец задержки и конец анимации):
+  // это десятки полных циклов на нажатие. Так их всего два, остальное считает видеочип.
+  const waitOf = j => j.at * t.wave + (j.kind === 'row' ? t.gap : 0);
+  const lengthOf = j => (j.kind === 'row' ? t.row : t.block);
+  const total = Math.max(1, ...jobs.map(j => waitOf(j) + Math.max(lengthOf(j), j.bar ? t.bar : 0)));
+  const frames = (from, to, wait, length) => {
+    const start = wait / total, end = Math.min(1, (wait + length) / total);
+    return [
+      ...(start > 0 ? [{ offset: 0, ...from }] : []),
+      { offset: start, ...from, easing: EASE },
+      { offset: end, ...to },
+      ...(end < 1 ? [{ offset: 1, ...to }] : []),
+    ];
+  };
+  for (const j of jobs) {
+    const wait = waitOf(j);
+    const timing = { duration: total, easing: 'linear' };
+    if (j.kind === 'bg') timing.pseudoElement = '::before';
+    const y = j.kind === 'row' ? t.rowY : t.blockY;
+    waveAnims.push(j.el.animate(frames({ opacity: 0, transform: `translate(${dx}px, ${y}px)` }, { opacity: j.el.classList.contains('past') ? PAST_OPACITY : 1, transform: 'translate(0, 0)' }, wait, lengthOf(j)), timing));
+    if (j.bar) waveAnims.push(j.bar.animate(frames({ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }, wait, t.bar), { duration: total, easing: 'linear' }));
+  }
 }
 
-const openScreen = dir => animated(dir, () => { render(); scrollTo(0, 0); });
-
-function switchTo(r) {
-  const from = TABS.findIndex(t => t[0] === lastRoute), to = TABS.findIndex(t => t[0] === r);
-  if (r !== 'projects') ui.project = null;
-  openScreen(to >= from ? 'fwd' : 'back');
-}
-
-let lastRoute = null;
-function render() {
-  const r = route();
-  const main = document.getElementById('main');
-  const open = r === lastRoute ? new Set([...main.querySelectorAll('details[open] > summary')].map(s => s.textContent)) : new Set();
-  main.innerHTML = VIEWS[r]();
-  if (open.size) main.querySelectorAll('details > summary').forEach(s => { if (open.has(s.textContent)) s.parentElement.open = true; });
-  lastRoute = r;
+function setActive(r) {
+  if (lastRoute !== r) {
+    if (lastRoute) { screens[lastRoute].el.classList.add('off'); screens[lastRoute].el.setAttribute('aria-hidden', 'true'); }
+    screens[r].el.classList.remove('off');
+    screens[r].el.removeAttribute('aria-hidden');
+    lastRoute = r;
+    if (FINE_POINTER) Object.entries(screens).forEach(([k, s]) => { s.el.inert = k !== r; });
+  }
   markNav(r);
   document.getElementById('topbar-title').textContent = TITLES[r];
   document.title = r === 'today' ? 'Распорядок' : `${TITLES[r]} · Распорядок`;
-  drawWeightChart();
+}
+
+// подкатегории: анимируются только плашки, которые от них зависят (data-part)
+const PARTS = { studyWeek: 'week', studyDay: 'day', foodDay: 'day', gymW: 'workout' };
+
+// Заменяются только эти плашки: заголовок, переключатели и график остаются теми же элементами и не перерисовываются.
+function animatePart(part) {
+  const s = screens[lastRoute];
+  const tmp = document.createElement('template');
+  tmp.innerHTML = VIEWS[lastRoute]();
+  const sel = `[data-part="${part}"]`;
+  const fresh = [...tmp.content.querySelectorAll(sel)];
+  s.col.querySelectorAll(sel).forEach((el, i) => { if (fresh[i]) el.replaceWith(fresh[i]); });
+  playWave(collectJobs(fresh, s.el.scrollTop), 'fade', PART_WAVE);
+  s.jobs = null;
+  whenFree();
+}
+
+// Перестроить открытый экран целиком с волной: вход в проект и выход из него, первый запуск
+function openScreen(dir) {
+  const s = screenOf(route());
+  buildScreen(route());
+  setActive(route());
+  s.el.scrollTop = 0;
+  s.jobs = collectJobs(blocksOf(s));
+  playWave(s.jobs, dir, TAB_WAVE);
+  whenFree();
+}
+
+function switchTo(r) {
+  if (r === lastRoute) return;
+  const from = TABS.findIndex(t => t[0] === lastRoute), to = TABS.findIndex(t => t[0] === r);
+  if (r !== 'projects' && ui.project) { ui.project = null; if (screens.projects) screens.projects.dirty = true; }
+  const s = screenOf(r);
+  if (!s.built) buildScreen(r);
+  s.el.scrollTop = 0;
+  if (!s.jobs) s.jobs = collectJobs(blocksOf(s));
+  playWave(s.jobs, to >= from ? 'fwd' : 'back', TAB_WAVE);
+  setActive(r);
+  whenFree();
+}
+
+function render() {
+  const r = route();
+  refreshScreen(r);
+  setActive(r);
+  whenFree();
+}
+
+// В свободное время: строит ещё не готовые экраны, обновляет устаревшие и готовит слои для волны. По одному шагу.
+const runWhenIdle = window.requestIdleCallback ? fn => requestIdleCallback(fn, { timeout: 1000 }) : fn => setTimeout(fn, 150);
+let freeQueued = false;
+
+function whenFree() {
+  if (freeQueued) return;
+  freeQueued = true;
+  runWhenIdle(freeStep);
+}
+
+function freeStep() {
+  freeQueued = false;
+  for (const [r] of TABS) {
+    const s = screenOf(r);
+    if (!s.built) buildScreen(r);
+    else if (s.dirty && r !== lastRoute) refreshScreen(r);
+    else if (!s.jobs) s.jobs = collectJobs(blocksOf(s), s.el.scrollTop);
+    else continue;
+    whenFree();
+    return;
+  }
+}
+
+function markDirty() {
+  Object.values(screens).forEach(s => { s.dirty = true; });
+  whenFree();
 }
 
 // ---------- Тосты и отмена ----------
@@ -841,11 +1021,11 @@ const ACTIONS = {
   },
   restAdd() { timer.end += 30000; tickRest(); return false; },
   restStop() { stopRest(); return false; },
-  studyWeek(el) { ui.studyWeek = +el.dataset.v; return 'fade'; },
-  studyDay(el) { ui.studyDay = +el.dataset.v; return 'fade'; },
-  foodDay(el) { ui.foodDay = +el.dataset.v; return 'fade'; },
-  gymW(el) { ui.gymW = el.dataset.v; return 'fade'; },
-  openGym(el) { ui.gymW = el.dataset.v; history.pushState(null, '', '#gym'); switchTo('gym'); return false; },
+  studyWeek(el) { ui.studyWeek = +el.dataset.v; return 'part'; },
+  studyDay(el) { ui.studyDay = +el.dataset.v; return 'part'; },
+  foodDay(el) { ui.foodDay = +el.dataset.v; return 'part'; },
+  gymW(el) { ui.gymW = el.dataset.v; return 'part'; },
+  openGym(el) { ui.gymW = el.dataset.v; refreshScreen('gym'); history.pushState(null, '', '#gym'); switchTo('gym'); return false; },
   openProject(el) { ui.project = el.dataset.id; openScreen('fwd'); return false; },
   closeProject() { ui.project = null; openScreen('back'); return false; },
   focusTask() { focusField('task-text'); return false; },
@@ -873,7 +1053,11 @@ document.addEventListener('click', e => {
   if (el.tagName === 'A') e.preventDefault();
   const res = fn(el, e);
   if (res === false) return;
-  if (res === 'fade') { animated('fade', render); return; }
+  if (res === 'part') {
+    el.parentElement.querySelectorAll('[aria-pressed]').forEach(b => b.setAttribute('aria-pressed', b === el));
+    afterPaint(() => animatePart(PARTS[el.dataset.a]));
+    return;
+  }
   if (res !== 'ui') save();
   render();
 });
@@ -884,11 +1068,23 @@ let tappedTab = false;
 function openTab(tab) {
   if (tab === route()) {
     if (ui.project) { ui.project = null; openScreen('back'); } // из проекта — обратно к списку
-    else scrollTo({ top: 0, behavior: 'smooth' });
+    else screens[lastRoute].el.scrollTo({ top: 0, behavior: 'smooth' });
     return;
   }
   history.pushState(null, '', '#' + tab);
   switchTo(tab);
+}
+
+// Подкатегории: сначала отклик на нажатие отдельным кадром, потом замена плашек.
+// Нажатия подряд не копятся: выполнится только последнее.
+let afterPaintJob = null;
+function afterPaint(job) {
+  const pending = afterPaintJob;
+  afterPaintJob = job;
+  if (pending) return;
+  const run = () => { const j = afterPaintJob; afterPaintJob = null; if (j) j(); };
+  requestAnimationFrame(() => setTimeout(run, 0));
+  setTimeout(run, 120); // запасной путь, если браузер не дал кадр
 }
 
 document.addEventListener('pointerdown', e => {
@@ -906,6 +1102,77 @@ document.addEventListener('click', e => {
   if (tappedTab) { tappedTab = false; return; }
   openTab(a.dataset.tab);
 });
+
+// ---------- Замер на самом телефоне: три нажатия на лого ----------
+const APP_VERSION = 15;
+let brandTaps = 0, brandTimer = null;
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.topbar-brand, .brand')) return;
+  e.preventDefault();
+  brandTaps++;
+  clearTimeout(brandTimer);
+  brandTimer = setTimeout(() => { brandTaps = 0; }, 900);
+  if (brandTaps === 1) openTab('today'); // обычное нажатие на лого, как и раньше, ведёт на главную
+  if (brandTaps === 3) { brandTaps = 0; runDiag(); }
+});
+
+async function runDiag() {
+  const raf = () => new Promise(res => requestAnimationFrame(res));
+  const pill = document.getElementById('toast');
+  const say = text => { pill.textContent = text; pill.hidden = false; clearTimeout(toastTimer); };
+  const sampleTab = async tab => {
+    const frames = []; const t0 = performance.now(); let last = t0, shown = null;
+    openTab(tab);
+    while (performance.now() - t0 < 750) {
+      await raf();
+      const n = performance.now(); frames.push(n - last); last = n;
+      if (shown === null && lastRoute === tab) shown = n - t0;
+    }
+    return { frames, shown: shown ?? 750 };
+  };
+  const median = xs => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
+  const saved = tabAnim, rows = [];
+  // длинные кадры главного потока: если их нет, а кадр долгий, тормозит видеочип, а не код
+  let longFrames = 0, po = null;
+  try { po = new PerformanceObserver(l => l.getEntries().forEach(e => { longFrames += e.duration; })); po.observe({ type: 'long-animation-frame' }); } catch (e) { po = null; }
+  const order = ['study', 'food', 'gym', 'projects', 'today'];
+  for (const [mode, label] of [['none', 'Без анимации'], ['wave', 'Волна']]) {
+    tabAnim = mode;
+    longFrames = 0;
+    const res = [];
+    for (let round = 0; round < 2; round++) for (const tab of order) {
+      say(`Замер, ничего не нажимай: ${label}`);
+      res.push(await sampleTab(tab));
+    }
+    await new Promise(r => setTimeout(r, 150));
+    const frames = res.flatMap(r => r.frames);
+    rows.push({ label, main: po ? Math.round(longFrames / res.length) : '—', shown: Math.round(median(res.map(r => r.shown))), worst: Math.round(Math.max(...frames)),
+      jank: (frames.filter(f => f > 34).length / res.length).toFixed(1), fps: Math.round(frames.length / (frames.reduce((a, b) => a + b, 0) / 1000)) });
+  }
+  tabAnim = saved;
+  po?.disconnect();
+  // прокрутка: без неё непонятно, тормозит ли всё приложение или только вкладки
+  say('Замер, ничего не нажимай: прокрутка');
+  openTab('food'); await new Promise(r => setTimeout(r, 400));
+  const sf = []; let sl = performance.now(); const s0 = sl;
+  const scroller = screens[lastRoute].el;
+  while (performance.now() - s0 < 1500) { scroller.scrollBy(0, 12); await raf(); const n = performance.now(); sf.push(n - sl); sl = n; }
+  scroller.scrollTop = 0;
+  pill.hidden = true;
+  const caches_ = window.caches ? (await caches.keys()).join(', ') : '—';
+  const box = document.createElement('div');
+  box.className = 'diag';
+  box.innerHTML = `<h2>Замер телефона</h2>
+    <table><tr><th></th><th>экран</th><th>худший</th><th>рывки</th><th>поток</th><th>к/с</th></tr>
+    ${rows.map(r => `<tr><td>${r.label}</td><td>${r.shown}</td><td>${r.worst}</td><td>${r.jank}</td><td>${r.main}</td><td>${r.fps}</td></tr>`).join('')}
+    <tr><td>Прокрутка</td><td>—</td><td>${Math.round(Math.max(...sf))}</td><td>${sf.filter(f => f > 34).length}</td><td>—</td><td>${Math.round(sf.length / 1.5)}</td></tr></table>
+    <p>Версия ${APP_VERSION}, кеш ${esc(caches_)}<br>Ядер ${navigator.hardwareConcurrency ?? '—'}, память ${navigator.deviceMemory ?? '—'} ГБ, плотность ${devicePixelRatio}, экран ${screen.width}×${screen.height}<br>${esc(navigator.userAgent)}</p>
+    <button class="btn" data-diag-close>Закрыть</button>`;
+  box.querySelector('[data-diag-close]').addEventListener('click', () => box.remove());
+  document.body.appendChild(box);
+  openTab('today');
+}
 
 // долгое нажатие на ссылку или кнопку не открывает системное меню
 document.addEventListener('contextmenu', e => { if (e.target.closest('a, button')) e.preventDefault(); });
@@ -932,6 +1199,7 @@ document.addEventListener('submit', e => {
   const d = Object.fromEntries(new FormData(f));
   if (d.text !== undefined && !d.text.trim()) return;
   if (fn(f, d) === false) return;
+  f.reset(); // поля теперь не пересоздаются, поэтому очищаем их сами
   save(); render();
   const again = document.querySelector(`form[data-f="${f.dataset.f}"] input[name="text"]`);
   if (again && f.dataset.f !== 'project') again.focus({ preventScroll: true });
@@ -955,15 +1223,27 @@ document.addEventListener('input', e => {
 window.addEventListener('hashchange', () => switchTo(route()));
 
 const idle = () => !document.activeElement?.matches('input, textarea, select');
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && idle()) render(); });
-setInterval(() => { if (['today', 'study'].includes(route()) && idle()) render(); }, 60000);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  markDirty();
+  if (idle()) render();
+});
+setInterval(() => {
+  ['today', 'study'].forEach(r => { if (screens[r]) screens[r].dirty = true; });
+  if (['today', 'study'].includes(route()) && idle()) render();
+  whenFree();
+}, 60000);
+const forgetLayout = () => { Object.values(screens).forEach(s => { s.jobs = null; }); drawWeightChart(true); whenFree(); };
 let resizeTimer = null;
-window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(drawWeightChart, 150); });
-if (document.fonts) document.fonts.ready.then(drawWeightChart);
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(forgetLayout, 150); });
+if (document.fonts) document.fonts.ready.then(forgetLayout);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  // новая версия скачалась — применить сразу, если человек сейчас ничего не вводит
+  const hadWorker = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadWorker && idle()) location.reload(); });
 }
 
 renderShell();
-animated('fade', render);
+openScreen('fade');
